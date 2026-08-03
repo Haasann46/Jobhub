@@ -1,0 +1,23 @@
+services:
+  db:
+    # Используем официальный образ PostgreSQL версии 15
+    image: postgres:15-alpine
+    # Название контейнера для удобства
+    container_name: jobhub_db
+    # Если контейнер упадет или ПК перезагрузится, он включится сам
+    restart: always
+    environment:
+      # Устанавливаем пользователя, пароль и название базы данных
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: superpassword
+      POSTGRES_DB: jobhub
+    ports:
+      # Пробрасываем порт 5432 из контейнера на твой компьютер (чтобы PyCharm мог подключиться)
+      - "5432:5432"
+    volumes:
+      # Сохраняем данные БД на жестком диске, чтобы они не удалились при перезапуске контейнера
+      - postgres_data:/var/lib/postgresql/data
+
+# Объявляем место для хранения данных
+volumes:
+  postgres_data:
