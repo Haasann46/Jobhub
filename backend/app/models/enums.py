@@ -21,3 +21,10 @@ class ExperienceLevel(str, Enum):
     MIDDLE = "middle"
     SENIOR = "senior"
     LEAD = "lead"
+
+class ApplicationStatus(str, Enum):
+    NEW = "new"
+    REVIEWING = "reviewing"
+    INTERVIEW = "interview"
+    REJECTED = "rejected"
+    HIRED = "hired"

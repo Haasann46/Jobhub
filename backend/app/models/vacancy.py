@@ -2,10 +2,11 @@ from typing import Optional
 
 from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Enum
 
 from app.models.base import BaseModel
 from app.models.enums import EmploymentType, ExperienceLevel
-from sqlalchemy import Enum
+
 
 class Vacancy(BaseModel):
     __tablename__ = "vacancies"

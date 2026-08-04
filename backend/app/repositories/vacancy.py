@@ -72,17 +72,3 @@ class VacancyRepository:
         )
 
         return list(result.scalars().all())
-
-    async def get_by_company_id(
-            self,
-            company_id: int,
-    ) -> list[Vacancy]:
-        result = await self.db.execute(
-            select(Vacancy).where(
-                Vacancy.company_id == company_id
-            )
-        )
-
-        return list(
-            result.scalars().all()
-        )
