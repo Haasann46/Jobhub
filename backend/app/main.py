@@ -8,6 +8,7 @@ from app.routers import profile
 from app.routers import company
 from app.routers import vacancies
 from app.routers import applications
+from app.routers import resumes
 
 # ── Создаём приложение FastAPI ────────────────────────────────────────────────
 app = FastAPI(
@@ -63,6 +64,11 @@ app.include_router(
     tags=["Applications"],
 )
 
+app.include_router(
+    resumes.router,
+    prefix="/api/resumes",
+    tags=["Resumes"],
+)
 
 @app.get("/", tags=["System"])
 async def root():

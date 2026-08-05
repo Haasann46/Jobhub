@@ -6,6 +6,7 @@ from app.models.profile import Profile
 from app.models.user import User
 from app.models.vacancy import Vacancy
 from app.models.application import Application
+from app.models.resume import Resume
 
 __all__ = [
     "Base",
@@ -14,4 +15,5 @@ __all__ = [
     "Company",
     "Vacancy",
     "Application",
+    "Resume",
 ]
