@@ -1,9 +1,37 @@
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
 from app.models.enums import EmploymentType, ExperienceLevel
 
+
+class VacancySort(str, Enum):
+    NEWEST = "newest"
+    OLDEST = "oldest"
+    SALARY_ASC = "salary_asc"
+    SALARY_DESC = "salary_desc"
+
+class VacancySearchParams(BaseModel):
+    search: str | None = None
+
+    location: str | None = None
+
+    employment_type: EmploymentType | None = None
+
+    experience_level: ExperienceLevel | None = None
+
+    salary_from: int | None = None
+
+    salary_to: int | None = None
+
+    is_remote: bool | None = None
+
+    page: int = 1
+
+    size: int = 20
+
+    sort: VacancySort = VacancySort.NEWEST
 
 class VacancyBase(BaseModel):
     title: str
@@ -39,7 +67,22 @@ class VacancyUpdate(BaseModel):
 
 
 class VacancyResponse(VacancyBase):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
 
     id: int
     company_id: int
+
+
+class VacancyListResponse(BaseModel):
+    items: list[VacancyResponse]
+
+    total: int
+
+    page: int
+    size: int
+    pages: int
+
+    has_next: bool
+    has_previous: bool

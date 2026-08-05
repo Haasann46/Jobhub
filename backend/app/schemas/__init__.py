@@ -14,6 +14,10 @@ from app.schemas.favorite import (
     FavoriteResponse,
 )
 
+from app.schemas.vacancy import (
+    VacancySearchParams,
+)
+
 __all__ = [
     "ApplicationCreate",
     "ApplicationResponse",
@@ -22,4 +26,5 @@ __all__ = [
     "ResumeUpdate",
     "ResumeResponse",
     "FavoriteResponse",
+    "VacancySearchParams,",
 ]

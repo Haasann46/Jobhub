@@ -1,45 +1,96 @@
+import math
+
+from fastapi import HTTPException, status
+
+from app.models.enums import (
+    EmploymentType,
+    UserRole,
+    ExperienceLevel,
+)
+from app.models.user import User
 from app.models.vacancy import Vacancy
+from app.repositories.company import CompanyRepository
 from app.repositories.vacancy import VacancyRepository
 from app.schemas.vacancy import (
     VacancyCreate,
-    VacancyUpdate,
+    VacancyListResponse,
     VacancyResponse,
+    VacancySort,
+    VacancyUpdate,
 )
-from fastapi import HTTPException, status
-
-from app.models.enums import UserRole
-from app.repositories.company import CompanyRepository
-from app.models.user import User
 
 
 class VacancyService:
-    def __init__(self, repository: VacancyRepository):
+    def __init__(
+        self,
+        repository: VacancyRepository,
+    ):
         self.repository = repository
 
-    async def get_all(self) -> list[VacancyResponse]:
-        vacancies = await self.repository.get_active()
+    async def search(
+        self,
+        search: str | None,
+        location: str | None,
+        employment_type: EmploymentType | None,
+        experience_level: ExperienceLevel | None,
+        salary_from: int | None,
+        salary_to: int | None,
+        is_remote: bool | None,
+        page: int,
+        size: int,
+        sort: VacancySort,
+    ) -> VacancyListResponse:
 
-        return [
-            VacancyResponse.model_validate(vacancy)
-            for vacancy in vacancies
-        ]
+        vacancies, total = await self.repository.search(
+            search=search,
+            location=location,
+            employment_type=employment_type,
+            experience_level=experience_level,
+            salary_from=salary_from,
+            salary_to=salary_to,
+            is_remote=is_remote,
+            page=page,
+            size=size,
+            sort=sort,
+        )
+
+        pages = math.ceil(total / size) if total else 0
+
+        return VacancyListResponse(
+            items=[
+                VacancyResponse.model_validate(
+                    vacancy
+                )
+                for vacancy in vacancies
+            ],
+            total=total,
+            page=page,
+            size=size,
+            pages=pages,
+            has_next=page < pages,
+            has_previous=page > 1,
+        )
 
     async def get_by_id(
         self,
         vacancy_id: int,
     ) -> VacancyResponse | None:
 
-        vacancy = await self.repository.get_by_id(vacancy_id)
+        vacancy = await self.repository.get_by_id(
+            vacancy_id,
+        )
 
         if vacancy is None:
             return None
 
-        return VacancyResponse.model_validate(vacancy)
+        return VacancyResponse.model_validate(
+            vacancy
+        )
 
     async def create(
-            self,
-            current_user: User,
-            data: VacancyCreate,
+        self,
+        current_user: User,
+        data: VacancyCreate,
     ) -> VacancyResponse:
 
         if current_user.role != UserRole.EMPLOYER:
@@ -76,8 +127,8 @@ class VacancyService:
         )
 
     async def get_my(
-            self,
-            current_user: User,
+        self,
+        current_user: User,
     ) -> list[VacancyResponse]:
 
         if current_user.role != UserRole.EMPLOYER:
@@ -112,10 +163,10 @@ class VacancyService:
         ]
 
     async def update(
-            self,
-            vacancy_id: int,
-            current_user: User,
-            data: VacancyUpdate,
+        self,
+        vacancy_id: int,
+        current_user: User,
+        data: VacancyUpdate,
     ) -> VacancyResponse:
 
         if current_user.role != UserRole.EMPLOYER:
@@ -155,7 +206,7 @@ class VacancyService:
             )
 
         for field, value in data.model_dump(
-                exclude_unset=True,
+            exclude_unset=True,
         ).items():
             setattr(
                 vacancy,
@@ -172,9 +223,9 @@ class VacancyService:
         )
 
     async def delete(
-            self,
-            vacancy_id: int,
-            current_user: User,
+        self,
+        vacancy_id: int,
+        current_user: User,
     ) -> None:
 
         if current_user.role != UserRole.EMPLOYER:
