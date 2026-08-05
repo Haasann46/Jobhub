@@ -10,6 +10,10 @@ from app.schemas.resume import (
     ResumeResponse,
 )
 
+from app.schemas.favorite import (
+    FavoriteResponse,
+)
+
 __all__ = [
     "ApplicationCreate",
     "ApplicationResponse",
@@ -17,4 +21,5 @@ __all__ = [
     "ResumeCreate",
     "ResumeUpdate",
     "ResumeResponse",
+    "FavoriteResponse",
 ]

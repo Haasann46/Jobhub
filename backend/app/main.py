@@ -9,6 +9,7 @@ from app.routers import company
 from app.routers import vacancies
 from app.routers import applications
 from app.routers import resumes
+from app.routers import favorites
 
 # ── Создаём приложение FastAPI ────────────────────────────────────────────────
 app = FastAPI(
@@ -68,6 +69,12 @@ app.include_router(
     resumes.router,
     prefix="/api/resumes",
     tags=["Resumes"],
+)
+
+app.include_router(
+    favorites.router,
+    prefix="/api/favorites",
+    tags=["Favorites"],
 )
 
 @app.get("/", tags=["System"])
