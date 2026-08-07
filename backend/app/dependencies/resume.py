@@ -1,9 +1,9 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
-from app.repositories.resume import ResumeRepository
-from app.services.resume import ResumeService
+from backend.app.database import get_db
+from backend.app.repositories.resume import ResumeRepository
+from backend.app.services.resume import ResumeService
 
 
 def get_resume_service(

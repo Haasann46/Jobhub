@@ -1,11 +1,11 @@
 from fastapi import HTTPException, status
 
-from app.models.enums import UserRole
-from app.models.favorite import Favorite
-from app.models.user import User
-from app.repositories.favorite import FavoriteRepository
-from app.repositories.vacancy import VacancyRepository
-from app.schemas.favorite import FavoriteResponse
+from backend.app.models.enums import UserRole
+from backend.app.models.favorite import Favorite
+from backend.app.models.user import User
+from backend.app.repositories.favorite import FavoriteRepository
+from backend.app.repositories.vacancy import VacancyRepository
+from backend.app.schemas.favorite import FavoriteResponse
 
 
 class FavoriteService:

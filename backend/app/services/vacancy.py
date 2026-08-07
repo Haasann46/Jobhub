@@ -1,23 +1,26 @@
 import math
-
+from datetime import datetime, timezone
 from fastapi import HTTPException, status
 
-from app.models.enums import (
+from backend.app.models.enums import (
     EmploymentType,
-    UserRole,
     ExperienceLevel,
+    UserRole,
+    VacancyCategory,
 )
-from app.models.user import User
-from app.models.vacancy import Vacancy
-from app.repositories.company import CompanyRepository
-from app.repositories.vacancy import VacancyRepository
-from app.schemas.vacancy import (
+from backend.app.models.user import User
+from backend.app.models.vacancy import Vacancy
+from backend.app.repositories.company import CompanyRepository
+from backend.app.repositories.vacancy import VacancyRepository
+from backend.app.schemas.vacancy import (
+    TechnologyResponse,
     VacancyCreate,
     VacancyListResponse,
     VacancyResponse,
     VacancySort,
     VacancyUpdate,
 )
+
 
 
 class VacancyService:
@@ -27,10 +30,37 @@ class VacancyService:
     ):
         self.repository = repository
 
+    def _to_response(
+        self,
+        vacancy: Vacancy,
+    ) -> VacancyResponse:
+
+        return VacancyResponse(
+            id=vacancy.id,
+            title=vacancy.title,
+            description=vacancy.description,
+            category=vacancy.category,
+            location=vacancy.location,
+            employment_type=vacancy.employment_type,
+            experience_level=vacancy.experience_level,
+            salary_from=vacancy.salary_from,
+            salary_to=vacancy.salary_to,
+            is_remote=vacancy.is_remote,
+            company_id=vacancy.company_id,
+            company_name=vacancy.company.name,
+            company_logo=vacancy.company.logo_url,
+            published_at=vacancy.published_at,
+            technologies=[
+                TechnologyResponse.model_validate(technology)
+                for technology in vacancy.technologies
+            ],
+        )
+
     async def search(
         self,
         search: str | None,
         location: str | None,
+        category: VacancyCategory | None,
         employment_type: EmploymentType | None,
         experience_level: ExperienceLevel | None,
         salary_from: int | None,
@@ -44,6 +74,7 @@ class VacancyService:
         vacancies, total = await self.repository.search(
             search=search,
             location=location,
+            category=category,
             employment_type=employment_type,
             experience_level=experience_level,
             salary_from=salary_from,
@@ -58,9 +89,7 @@ class VacancyService:
 
         return VacancyListResponse(
             items=[
-                VacancyResponse.model_validate(
-                    vacancy
-                )
+                self._to_response(vacancy)
                 for vacancy in vacancies
             ],
             total=total,
@@ -83,8 +112,8 @@ class VacancyService:
         if vacancy is None:
             return None
 
-        return VacancyResponse.model_validate(
-            vacancy
+        return self._to_response(
+            vacancy,
         )
 
     async def create(
@@ -113,16 +142,25 @@ class VacancyService:
                 detail="Company not found.",
             )
 
+        payload = data.model_dump(
+            exclude={"technology_ids"},
+        )
+
         vacancy = Vacancy(
             company_id=company.id,
-            **data.model_dump(),
+            published_at=datetime.now(timezone.utc),
+            **payload,
         )
 
         created = await self.repository.create(
             vacancy,
         )
 
-        return VacancyResponse.model_validate(
+        created = await self.repository.get_by_id(
+            created.id,
+        )
+
+        return self._to_response(
             created,
         )
 
@@ -156,9 +194,7 @@ class VacancyService:
         )
 
         return [
-            VacancyResponse.model_validate(
-                vacancy
-            )
+            self._to_response(vacancy)
             for vacancy in vacancies
         ]
 
@@ -218,7 +254,11 @@ class VacancyService:
             vacancy,
         )
 
-        return VacancyResponse.model_validate(
+        vacancy = await self.repository.get_by_id(
+            vacancy.id,
+        )
+
+        return self._to_response(
             vacancy,
         )
 

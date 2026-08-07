@@ -1,10 +1,11 @@
 from fastapi import Query
 
-from app.models.enums import (
+from backend.app.models.enums import (
     EmploymentType,
     ExperienceLevel,
+    VacancyCategory,
 )
-from app.schemas.vacancy import (
+from backend.app.schemas.vacancy import (
     VacancySearchParams,
     VacancySort,
 )
@@ -15,9 +16,12 @@ def get_search_params(
         default=None,
         description="Search by title or description.",
     ),
-    location: str | None = Query(
+    location: str |None = Query(
         default=None,
         description="Vacancy location.",
+    ),
+    category: VacancyCategory | None = Query(
+        default=None,
     ),
     employment_type: EmploymentType | None = Query(
         default=None,
@@ -53,6 +57,7 @@ def get_search_params(
     return VacancySearchParams(
         search=search,
         location=location,
+        category=category,
         employment_type=employment_type,
         experience_level=experience_level,
         salary_from=salary_from,

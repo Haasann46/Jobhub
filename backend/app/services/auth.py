@@ -1,11 +1,11 @@
-from app.core.security import (
+from backend.app.core.security import (
     create_access_token,
     hash_password,
     verify_password,
 )
-from app.models.user import User
-from app.repositories.auth import AuthRepository
-from app.schemas.auth import (
+from backend.app.models.user import User
+from backend.app.repositories.auth import AuthRepository
+from backend.app.schemas.auth import (
     Token,
     UserLogin,
     UserRegister,

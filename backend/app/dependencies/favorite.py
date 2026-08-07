@@ -1,9 +1,9 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
-from app.repositories.favorite import FavoriteRepository
-from app.services.favorite import FavoriteService
+from backend.app.database import get_db
+from backend.app.repositories.favorite import FavoriteRepository
+from backend.app.services.favorite import FavoriteService
 
 
 def get_favorite_service(

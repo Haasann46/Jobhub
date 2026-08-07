@@ -1,7 +1,7 @@
 from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import BaseModel
+from backend.app.models.base import BaseModel
 
 
 class Resume(BaseModel):

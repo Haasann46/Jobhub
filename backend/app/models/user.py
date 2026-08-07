@@ -1,8 +1,8 @@
 from sqlalchemy import Boolean, Enum, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import BaseModel
-from app.models.enums import UserRole
+from backend.app.models.base import BaseModel
+from backend.app.models.enums import UserRole
 
 
 class User(BaseModel):

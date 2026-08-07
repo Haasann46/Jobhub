@@ -1,10 +1,10 @@
 from fastapi import HTTPException, status
 
-from app.models.company import Company
-from app.models.enums import UserRole
-from app.models.user import User
-from app.repositories.company import CompanyRepository
-from app.schemas.company import (
+from backend.app.models.company import Company
+from backend.app.models.enums import UserRole
+from backend.app.models.user import User
+from backend.app.repositories.company import CompanyRepository
+from backend.app.schemas.company import (
     CompanyCreate,
     CompanyResponse,
     CompanyUpdate,

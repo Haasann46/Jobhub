@@ -1,12 +1,12 @@
 from fastapi import HTTPException, status
 
-from app.models.application import Application
-from app.models.enums import ApplicationStatus, UserRole
-from app.models.user import User
-from app.repositories.application import ApplicationRepository
-from app.repositories.company import CompanyRepository
-from app.repositories.vacancy import VacancyRepository
-from app.schemas.application import (
+from backend.app.models.application import Application
+from backend.app.models.enums import ApplicationStatus, UserRole
+from backend.app.models.user import User
+from backend.app.repositories.application import ApplicationRepository
+from backend.app.repositories.company import CompanyRepository
+from backend.app.repositories.vacancy import VacancyRepository
+from backend.app.schemas.application import (
     ApplicationCreate,
     ApplicationResponse,
     ApplicationStatusUpdate,

@@ -1,4 +1,4 @@
-from .config import settings
-from .database import Base
+from backend.app.config import settings
+from backend.app.database import Base
 
 __all__ = ['settings', 'Base']

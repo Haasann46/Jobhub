@@ -1,9 +1,9 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
-from app.repositories.application import ApplicationRepository
-from app.services.application import ApplicationService
+from backend.app.database import get_db
+from backend.app.repositories.application import ApplicationRepository
+from backend.app.services.application import ApplicationService
 
 
 def get_application_service(

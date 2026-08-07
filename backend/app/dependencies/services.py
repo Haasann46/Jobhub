@@ -1,15 +1,15 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from backend.app.database import get_db
 
-from app.repositories.auth import AuthRepository
-from app.repositories.profile import ProfileRepository
-from app.repositories.company import CompanyRepository
+from backend.app.repositories.auth import AuthRepository
+from backend.app.repositories.profile import ProfileRepository
+from backend.app.repositories.company import CompanyRepository
 
-from app.services.auth import AuthService
-from app.services.profile import ProfileService
-from app.services.company import CompanyService
+from backend.app.services.auth import AuthService
+from backend.app.services.profile import ProfileService
+from backend.app.services.company import CompanyService
 
 
 def get_auth_service(

@@ -1,20 +1,20 @@
-from app.schemas.application import (
+from backend.app.schemas.application import (
     ApplicationCreate,
     ApplicationResponse,
     ApplicationStatusUpdate,
 )
 
-from app.schemas.resume import (
+from backend.app.schemas.resume import (
     ResumeCreate,
     ResumeUpdate,
     ResumeResponse,
 )
 
-from app.schemas.favorite import (
+from backend.app.schemas.favorite import (
     FavoriteResponse,
 )
 
-from app.schemas.vacancy import (
+from backend.app.schemas.vacancy import (
     VacancySearchParams,
 )
 

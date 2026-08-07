@@ -9,7 +9,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
-from app.models.base import TimestampMixin
+from backend.app.models.base import TimestampMixin
 
 # ── Таблица связи conversation ↔ участники (многие ко многим) ────────────────
 conversation_participants = Table(

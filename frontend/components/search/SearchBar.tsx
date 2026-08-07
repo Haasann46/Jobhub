@@ -1,70 +1,78 @@
 "use client";
 
-import { useState } from "react";
-
 import SearchInput from "./SearchInput";
 import LocationInput from "./LocationInput";
 import SearchButton from "./SearchButton";
 import PopularTags from "./PopularTags";
 
-export default function SearchBar() {
-    const [query, setQuery] = useState("");
-    const [location, setLocation] = useState("");
+import { useVacancySearchStore } from "@/store/vacancy-search";
 
-    function handleSearch() {
-        console.log({
-            query,
-            location,
-        });
-    }
+export default function SearchBar() {
+    const draftSearch = useVacancySearchStore(
+        (state) => state.draftSearch,
+    );
+
+    const draftLocation = useVacancySearchStore(
+        (state) => state.draftLocation,
+    );
+
+    const setDraftSearch = useVacancySearchStore(
+        (state) => state.setDraftSearch,
+    );
+
+    const setDraftLocation = useVacancySearchStore(
+        (state) => state.setDraftLocation,
+    );
+
+    const applySearch = useVacancySearchStore(
+        (state) => state.applySearch,
+    );
 
     return (
-        <section className="relative -mt-12 z-20">
+        <div className="mt-8">
 
-            <div className="mx-auto max-w-5xl px-6">
+            <div className="mx-auto max-w-3xl rounded-2xl border border-white/10 bg-white/10 p-3 backdrop-blur-xl shadow-2xl">
 
-                <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_130px]">
 
-                    <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+                    <div className="flex items-center rounded-xl bg-white/10 px-4">
 
-                        <div className="flex items-center rounded-2xl border border-slate-200 px-4">
+                        <span className="mr-3 text-lg">
+                            🔍
+                        </span>
 
-                            <span className="mr-3 text-xl">
-                                🔍
-                            </span>
-
-                            <SearchInput
-                                value={query}
-                                onChange={setQuery}
-                            />
-
-                        </div>
-
-                        <div className="flex items-center rounded-2xl border border-slate-200 px-4">
-
-                            <span className="mr-3 text-xl">
-                                📍
-                            </span>
-
-                            <LocationInput
-                                value={location}
-                                onChange={setLocation}
-                            />
-
-                        </div>
-
-                        <SearchButton
-                            onClick={handleSearch}
+                        <SearchInput
+                            value={draftSearch}
+                            onChange={setDraftSearch}
+                            onEnter={applySearch}
                         />
 
                     </div>
 
-                </div>
+                    <div className="flex items-center rounded-xl bg-white/10 px-4">
 
-                <PopularTags />
+                        <span className="mr-3 text-lg">
+                            📍
+                        </span>
+
+                        <LocationInput
+                            value={draftLocation}
+                            onChange={setDraftLocation}
+                            onEnter={applySearch}
+                        />
+
+                    </div>
+
+                    <SearchButton
+                        onClick={applySearch}
+                    />
+
+                </div>
 
             </div>
 
-        </section>
+            <PopularTags />
+
+        </div>
     );
 }

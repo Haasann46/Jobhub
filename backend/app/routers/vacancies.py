@@ -1,23 +1,28 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+)
 
-from app.dependencies.current_user import get_current_user
-from app.dependencies.search import get_search_params
-from app.dependencies.vacancy import get_vacancy_service
-from app.models.user import User
-from app.schemas.vacancy import (
+from backend.app.dependencies.current_user import get_current_user
+from backend.app.dependencies.search import get_search_params
+from backend.app.dependencies.vacancy import get_vacancy_service
+from backend.app.models.user import User
+from backend.app.schemas.vacancy import (
     VacancyCreate,
     VacancyListResponse,
     VacancyResponse,
     VacancySearchParams,
     VacancyUpdate,
 )
-from app.services.vacancy import VacancyService
+from backend.app.services.vacancy import VacancyService
 
 router = APIRouter()
 
 
 @router.get(
-    "/",
+    "",
     response_model=VacancyListResponse,
 )
 async def get_vacancies(
@@ -85,10 +90,8 @@ async def get_vacancy(
     )
 
     if vacancy is None:
-        from fastapi import HTTPException
-
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Vacancy not found.",
         )
 

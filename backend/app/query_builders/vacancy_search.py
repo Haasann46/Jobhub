@@ -1,12 +1,12 @@
-from sqlalchemy import Select
-from sqlalchemy import or_
+from sqlalchemy import Select, or_
 
-from app.models.enums import (
+from backend.app.models.enums import (
     EmploymentType,
     ExperienceLevel,
+    VacancyCategory,
 )
-from app.models.vacancy import Vacancy
-from app.schemas.vacancy import VacancySort
+from backend.app.models.vacancy import Vacancy
+from backend.app.schemas.vacancy import VacancySort
 
 
 def apply_search(
@@ -35,6 +35,19 @@ def apply_location(
             Vacancy.location.ilike(
                 f"%{location}%"
             )
+        )
+
+    return query
+
+
+def apply_category(
+    query: Select,
+    category: VacancyCategory | None,
+) -> Select:
+
+    if category:
+        query = query.where(
+            Vacancy.category == category
         )
 
     return query
@@ -105,7 +118,7 @@ def apply_sort(
 
     if sort == VacancySort.OLDEST:
         return query.order_by(
-            Vacancy.created_at.asc()
+            Vacancy.published_at.asc()
         )
 
     if sort == VacancySort.SALARY_ASC:
@@ -119,5 +132,5 @@ def apply_sort(
         )
 
     return query.order_by(
-        Vacancy.created_at.desc()
+        Vacancy.published_at.desc()
     )

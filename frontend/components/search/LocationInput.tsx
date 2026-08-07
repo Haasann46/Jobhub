@@ -1,19 +1,26 @@
 interface LocationInputProps {
     value: string;
     onChange: (value: string) => void;
+    onEnter?: () => void;
 }
 
 export default function LocationInput({
     value,
     onChange,
+    onEnter,
 }: LocationInputProps) {
     return (
         <input
             type="text"
-            placeholder="Город или Remote..."
             value={value}
+            placeholder="Город или Remote"
             onChange={(e) => onChange(e.target.value)}
-            className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400"
+            onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                    onEnter?.();
+                }
+            }}
+            className="w-full bg-transparent text-white outline-none placeholder:text-slate-400"
         />
     );
 }

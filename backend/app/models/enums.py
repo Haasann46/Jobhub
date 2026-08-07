@@ -22,6 +22,18 @@ class ExperienceLevel(str, Enum):
     SENIOR = "senior"
     LEAD = "lead"
 
+
+class VacancyCategory(str, Enum):
+    BACKEND = "backend"
+    FRONTEND = "frontend"
+    DEVOPS = "devops"
+    MOBILE = "mobile"
+    QA = "qa"
+    DESIGN = "design"
+    AI = "ai"
+    DATA = "data"
+
+
 class ApplicationStatus(str, Enum):
     NEW = "new"
     REVIEWING = "reviewing"

@@ -1,14 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+)
+from fastapi.security import OAuth2PasswordRequestForm
+
 import traceback
-from app.dependencies.auth import get_auth_service
-from app.schemas.auth import (
+
+from backend.app.dependencies.auth import get_auth_service
+from backend.app.schemas.auth import (
     Token,
     UserLogin,
     UserRegister,
     UserResponse,
 )
-from app.services.auth import AuthService
-from fastapi.security import OAuth2PasswordRequestForm
+from backend.app.services.auth import AuthService
 
 router = APIRouter()
 
@@ -21,27 +28,28 @@ router = APIRouter()
 async def register(
     data: UserRegister,
     service: AuthService = Depends(
-        get_auth_service
+        get_auth_service,
     ),
 ):
     try:
-        return await service.register(data)
-
+        return await service.register(
+            data,
+        )
 
     except ValueError as e:
         traceback.print_exc()
+
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
 
-
     except Exception as e:
         traceback.print_exc()
-        raise HTTPException(
-            status_code=500,
-            detail=str(e),
 
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
         )
 
 
@@ -60,7 +68,7 @@ async def login(
             UserLogin(
                 email=form_data.username,
                 password=form_data.password,
-            )
+            ),
         )
 
     except ValueError as e:

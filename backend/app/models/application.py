@@ -6,8 +6,8 @@ from sqlalchemy import (
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import BaseModel
-from app.models.enums import ApplicationStatus
+from backend.app.models.base import BaseModel
+from backend.app.models.enums import ApplicationStatus
 
 
 class Application(BaseModel):

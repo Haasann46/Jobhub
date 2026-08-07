@@ -1,18 +1,18 @@
 from fastapi import APIRouter, Depends, status
 
-from app.dependencies.application import (
+from backend.app.dependencies.application import (
     get_application_service,
 )
-from app.dependencies.current_user import (
+from backend.app.dependencies.current_user import (
     get_current_user,
 )
-from app.models.user import User
-from app.schemas.application import (
+from backend.app.models.user import User
+from backend.app.schemas.application import (
     ApplicationCreate,
     ApplicationResponse,
     ApplicationStatusUpdate,
 )
-from app.services.application import ApplicationService
+from backend.app.services.application import ApplicationService
 
 router = APIRouter(
     prefix="/applications",

@@ -1,9 +1,15 @@
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from app.models.enums import EmploymentType, ExperienceLevel
-from app.models.vacancy import Vacancy
-from app.query_builders.vacancy_search import (
+from backend.app.models.enums import (
+    EmploymentType,
+    ExperienceLevel,
+    VacancyCategory,
+)
+from backend.app.models.vacancy import Vacancy
+from backend.app.query_builders.vacancy_search import (
+    apply_category,
     apply_employment_type,
     apply_experience,
     apply_location,
@@ -12,7 +18,7 @@ from app.query_builders.vacancy_search import (
     apply_search,
     apply_sort,
 )
-from app.schemas.vacancy import VacancySort
+from backend.app.schemas.vacancy import VacancySort
 
 
 class VacancyRepository:
@@ -25,8 +31,12 @@ class VacancyRepository:
     async def get_all(
         self,
     ) -> list[Vacancy]:
+
         result = await self.db.execute(
-            select(Vacancy)
+            select(Vacancy).options(
+                selectinload(Vacancy.company),
+                selectinload(Vacancy.technologies),
+            )
         )
 
         return list(result.scalars().all())
@@ -34,8 +44,14 @@ class VacancyRepository:
     async def get_active(
         self,
     ) -> list[Vacancy]:
+
         result = await self.db.execute(
-            select(Vacancy).where(
+            select(Vacancy)
+            .options(
+                selectinload(Vacancy.company),
+                selectinload(Vacancy.technologies),
+            )
+            .where(
                 Vacancy.is_active.is_(True)
             )
         )
@@ -46,6 +62,7 @@ class VacancyRepository:
         self,
         search: str | None,
         location: str | None,
+        category: VacancyCategory | None,
         employment_type: EmploymentType | None,
         experience_level: ExperienceLevel | None,
         salary_from: int | None,
@@ -56,40 +73,24 @@ class VacancyRepository:
         sort: VacancySort,
     ) -> tuple[list[Vacancy], int]:
 
-        query = select(Vacancy).where(
-            Vacancy.is_active.is_(True)
+        query = (
+            select(Vacancy)
+            .options(
+                selectinload(Vacancy.company),
+                selectinload(Vacancy.technologies),
+            )
+            .where(
+                Vacancy.is_active.is_(True),
+            )
         )
 
-        query = apply_search(
-            query,
-            search,
-        )
-
-        query = apply_location(
-            query,
-            location,
-        )
-
-        query = apply_employment_type(
-            query,
-            employment_type,
-        )
-
-        query = apply_experience(
-            query,
-            experience_level,
-        )
-
-        query = apply_salary(
-            query,
-            salary_from,
-            salary_to,
-        )
-
-        query = apply_remote(
-            query,
-            is_remote,
-        )
+        query = apply_search(query, search)
+        query = apply_location(query, location)
+        query = apply_category(query, category)
+        query = apply_employment_type(query, employment_type)
+        query = apply_experience(query, experience_level)
+        query = apply_salary(query, salary_from, salary_to)
+        query = apply_remote(query, is_remote)
 
         count_query = select(
             func.count()
@@ -122,47 +123,42 @@ class VacancyRepository:
 
         return vacancies, total or 0
 
-        total = await self.db.scalar(
-            count_query
-        )
-
-        query = query.offset(
-            (page - 1) * size
-        ).limit(
-            size
-        )
-
-        result = await self.db.execute(
-            query
-        )
-
-        vacancies = list(
-            result.scalars().all()
-        )
-
-        return vacancies, total or 0
-
     async def get_by_id(
         self,
         vacancy_id: int,
     ) -> Vacancy | None:
 
         result = await self.db.execute(
-            select(Vacancy).where(
-                Vacancy.id == vacancy_id
+            select(Vacancy)
+            .options(
+                selectinload(Vacancy.company),
+                selectinload(Vacancy.technologies),
+            )
+            .where(
+                Vacancy.id == vacancy_id,
             )
         )
 
         return result.scalar_one_or_none()
 
     async def create(
-        self,
-        vacancy: Vacancy,
+            self,
+            vacancy: Vacancy,
     ) -> Vacancy:
 
         self.db.add(vacancy)
 
-        await self.db.commit()
+        try:
+            await self.db.commit()
+
+        except Exception as e:
+            await self.db.rollback()
+            print("=" * 80)
+            print("COMMIT ERROR")
+            print(type(e))
+            print(e)
+            print("=" * 80)
+            raise
 
         await self.db.refresh(vacancy)
 
@@ -194,8 +190,13 @@ class VacancyRepository:
     ) -> list[Vacancy]:
 
         result = await self.db.execute(
-            select(Vacancy).where(
-                Vacancy.company_id == company_id
+            select(Vacancy)
+            .options(
+                selectinload(Vacancy.company),
+                selectinload(Vacancy.technologies),
+            )
+            .where(
+                Vacancy.company_id == company_id,
             )
         )
 

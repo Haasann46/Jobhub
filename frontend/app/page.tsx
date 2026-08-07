@@ -1,13 +1,11 @@
 import Hero from "@/components/hero/Hero";
-import SearchBar from "@/components/search/SearchBar";
-import VacancyList from "@/components/vacancy/VacancyList";
+import VacanciesSection from "@/components/vacancy/VacanciesSection";
 
 export default function HomePage() {
     return (
         <>
             <Hero />
-            <SearchBar />
-            <VacancyList />
+            <VacanciesSection />
         </>
     );
 }

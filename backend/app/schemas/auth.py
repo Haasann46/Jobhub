@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.models.enums import UserRole
+from backend.app.models.enums import UserRole
 
 
 # ==========================================================

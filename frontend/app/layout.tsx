@@ -6,7 +6,7 @@ import Footer from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
     title: "JobHub",
-    description: "Modern job search platform",
+    description: "JobHub Platform",
 };
 
 export default function RootLayout({
@@ -17,7 +17,9 @@ export default function RootLayout({
     return (
         <html lang="ru">
             <body className="min-h-screen bg-slate-50 text-slate-900">
+
                 <div className="flex min-h-screen flex-col">
+
                     <Header />
 
                     <main className="flex-1">
@@ -25,7 +27,9 @@ export default function RootLayout({
                     </main>
 
                     <Footer />
+
                 </div>
+
             </body>
         </html>
     );

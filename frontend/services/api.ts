@@ -8,4 +8,11 @@ const api = axios.create({
     },
 });
 
+api.interceptors.request.use((config) => {
+    console.log("BASE URL:", config.baseURL);
+    console.log("URL:", config.url);
+    console.log("FULL:", `${config.baseURL}${config.url}`);
+    return config;
+});
+
 export default api;

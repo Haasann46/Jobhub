@@ -1,10 +1,10 @@
 from fastapi import HTTPException, status
 
-from app.models.enums import UserRole
-from app.models.resume import Resume
-from app.models.user import User
-from app.repositories.resume import ResumeRepository
-from app.schemas.resume import (
+from backend.app.models.enums import UserRole
+from backend.app.models.resume import Resume
+from backend.app.models.user import User
+from backend.app.repositories.resume import ResumeRepository
+from backend.app.schemas.resume import (
     ResumeCreate,
     ResumeResponse,
     ResumeUpdate,

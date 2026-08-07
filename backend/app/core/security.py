@@ -4,7 +4,7 @@ from typing import Any
 from jose import JWTError, jwt
 from pwdlib import PasswordHash
 
-from app.config import settings
+from backend.app.config import settings
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 

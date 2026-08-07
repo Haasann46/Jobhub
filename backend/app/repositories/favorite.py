@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.favorite import Favorite
+from backend.app.models.favorite import Favorite
 
 
 class FavoriteRepository:

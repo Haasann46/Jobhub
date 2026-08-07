@@ -9,13 +9,21 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-# Добавляем родительскую директорию (backend) в sys.path
-backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if backend_dir not in sys.path:
-    sys.path.insert(0, backend_dir)
 
-from app.config import settings
-from app.models import Base
+project_root = os.path.dirname(
+    os.path.dirname(
+        os.path.dirname(
+            os.path.abspath(__file__)
+        )
+    )
+)
+
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+
+from backend.app.config import settings
+from backend.app.models import Base
 
 config = context.config
 

@@ -1,14 +1,18 @@
-from fastapi import APIRouter, Depends, status
-
-from app.dependencies.current_user import get_current_user
-from app.dependencies.resume import get_resume_service
-from app.models.user import User
-from app.schemas.resume import (
-    ResumeCreate,
-    ResumeUpdate,
-    ResumeResponse,
+from fastapi import (
+    APIRouter,
+    Depends,
+    status,
 )
-from app.services.resume import ResumeService
+
+from backend.app.dependencies.current_user import get_current_user
+from backend.app.dependencies.resume import get_resume_service
+from backend.app.models.user import User
+from backend.app.schemas.resume import (
+    ResumeCreate,
+    ResumeResponse,
+    ResumeUpdate,
+)
+from backend.app.services.resume import ResumeService
 
 router = APIRouter(
     tags=["Resumes"],
@@ -22,8 +26,12 @@ router = APIRouter(
 )
 async def create_resume(
     data: ResumeCreate,
-    current_user: User = Depends(get_current_user),
-    service: ResumeService = Depends(get_resume_service),
+    current_user: User = Depends(
+        get_current_user,
+    ),
+    service: ResumeService = Depends(
+        get_resume_service,
+    ),
 ):
     return await service.create(
         current_user,
@@ -36,8 +44,12 @@ async def create_resume(
     response_model=list[ResumeResponse],
 )
 async def get_my_resumes(
-    current_user: User = Depends(get_current_user),
-    service: ResumeService = Depends(get_resume_service),
+    current_user: User = Depends(
+        get_current_user,
+    ),
+    service: ResumeService = Depends(
+        get_resume_service,
+    ),
 ):
     return await service.get_my(
         current_user,
@@ -50,8 +62,12 @@ async def get_my_resumes(
 )
 async def get_resume(
     resume_id: int,
-    current_user: User = Depends(get_current_user),
-    service: ResumeService = Depends(get_resume_service),
+    current_user: User = Depends(
+        get_current_user,
+    ),
+    service: ResumeService = Depends(
+        get_resume_service,
+    ),
 ):
     return await service.get_by_id(
         resume_id,
@@ -66,8 +82,12 @@ async def get_resume(
 async def update_resume(
     resume_id: int,
     data: ResumeUpdate,
-    current_user: User = Depends(get_current_user),
-    service: ResumeService = Depends(get_resume_service),
+    current_user: User = Depends(
+        get_current_user,
+    ),
+    service: ResumeService = Depends(
+        get_resume_service,
+    ),
 ):
     return await service.update(
         resume_id,
@@ -82,8 +102,12 @@ async def update_resume(
 )
 async def delete_resume(
     resume_id: int,
-    current_user: User = Depends(get_current_user),
-    service: ResumeService = Depends(get_resume_service),
+    current_user: User = Depends(
+        get_current_user,
+    ),
+    service: ResumeService = Depends(
+        get_resume_service,
+    ),
 ):
     await service.delete(
         resume_id,

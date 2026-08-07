@@ -1,12 +1,14 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
-from .config import settings
+from backend.app.config import settings
 
 # Движок базы данных (engine) — он отвечает за физическое соединение с PostgreSQL
 engine = create_async_engine(
     settings.database_url,
-    echo=True, # Включает вывод всех SQL-запросов в консоль (полезно при отладке)
+    echo=True,
+    pool_pre_ping=True,  # <-- ДОБАВЬТЕ ЭТУ СТРОКУ. Она заставит SQLAlchemy проверять соединение перед отправкой запроса
 )
+
 
 # Фабрика сессий. Сессия нужна для выполнения запросов (добавление, поиск, удаление)
 async_session_maker = async_sessionmaker(

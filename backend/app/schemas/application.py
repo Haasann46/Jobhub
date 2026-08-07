@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.enums import ApplicationStatus
+from backend.app.models.enums import ApplicationStatus
 
 
 class ApplicationCreate(BaseModel):

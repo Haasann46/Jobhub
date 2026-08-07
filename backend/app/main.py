@@ -1,15 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import settings
-from app.routers import auth
-from app.routers import users
-from app.routers import profile
-from app.routers import company
-from app.routers import vacancies
-from app.routers import applications
-from app.routers import resumes
-from app.routers import favorites
+from backend.app.config import settings
+from backend.app.routers import auth
+from backend.app.routers import users
+from backend.app.routers import profile
+from backend.app.routers import company
+from backend.app.routers import vacancies
+from backend.app.routers import applications
+from backend.app.routers import resumes
+from backend.app.routers import favorites
 
 # ── Создаём приложение FastAPI ────────────────────────────────────────────────
 app = FastAPI(
@@ -71,11 +71,6 @@ app.include_router(
     tags=["Resumes"],
 )
 
-app.include_router(
-    favorites.router,
-    prefix="/api/favorites",
-    tags=["Favorites"],
-)
 
 @app.get("/", tags=["System"])
 async def root():

@@ -8,9 +8,25 @@ export default function SearchButton({
     return (
         <button
             onClick={onClick}
-            className="rounded-xl bg-blue-600 px-8 py-3 font-semibold text-white transition hover:bg-blue-700"
+            className="
+                flex items-center justify-center gap-2
+                rounded-xl
+                bg-blue-600
+                px-7
+                py-3
+                font-semibold
+                text-white
+                shadow-lg
+                transition-all
+                duration-200
+                hover:bg-blue-700
+                hover:shadow-xl
+                active:scale-[0.98]
+            "
         >
-            Искать
+            <span>🔎</span>
+
+            <span>Найти</span>
         </button>
     );
 }
