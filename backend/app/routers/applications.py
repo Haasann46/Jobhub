@@ -14,6 +14,7 @@ from backend.app.schemas.application import (
 )
 from backend.app.services.application import ApplicationService
 
+
 router = APIRouter(
     prefix="/applications",
     tags=["Applications"],
@@ -28,7 +29,9 @@ router = APIRouter(
 async def create_application(
     vacancy_id: int,
     data: ApplicationCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        get_current_user,
+    ),
     service: ApplicationService = Depends(
         get_application_service,
     ),
@@ -45,7 +48,9 @@ async def create_application(
     response_model=list[ApplicationResponse],
 )
 async def get_my_applications(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        get_current_user,
+    ),
     service: ApplicationService = Depends(
         get_application_service,
     ),
@@ -61,7 +66,9 @@ async def get_my_applications(
 )
 async def get_vacancy_applications(
     vacancy_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        get_current_user,
+    ),
     service: ApplicationService = Depends(
         get_application_service,
     ),
@@ -79,7 +86,9 @@ async def get_vacancy_applications(
 async def update_application_status(
     application_id: int,
     data: ApplicationStatusUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        get_current_user,
+    ),
     service: ApplicationService = Depends(
         get_application_service,
     ),

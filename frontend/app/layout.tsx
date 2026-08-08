@@ -3,34 +3,44 @@ import "./globals.css";
 
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import AuthProvider from "@/components/auth/AuthProvider";
 
 export const metadata: Metadata = {
     title: "JobHub",
     description: "JobHub Platform",
 };
 
+
 export default function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+
     return (
+
         <html lang="ru">
+
             <body className="min-h-screen bg-slate-50 text-slate-900">
 
-                <div className="flex min-h-screen flex-col">
+                <AuthProvider>
 
-                    <Header />
+                    <div className="flex min-h-screen flex-col">
 
-                    <main className="flex-1">
-                        {children}
-                    </main>
+                        <Header />
 
-                    <Footer />
+                        <main className="flex-1">
+                            {children}
+                        </main>
 
-                </div>
+                        <Footer />
+
+                    </div>
+
+                </AuthProvider>
 
             </body>
+
         </html>
     );
 }

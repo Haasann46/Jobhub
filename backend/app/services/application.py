@@ -5,6 +5,7 @@ from backend.app.models.enums import ApplicationStatus, UserRole
 from backend.app.models.user import User
 from backend.app.repositories.application import ApplicationRepository
 from backend.app.repositories.company import CompanyRepository
+from backend.app.repositories.resume import ResumeRepository
 from backend.app.repositories.vacancy import VacancyRepository
 from backend.app.schemas.application import (
     ApplicationCreate,
@@ -47,9 +48,37 @@ class ApplicationService:
                 detail="Vacancy not found.",
             )
 
-        existing = await self.repository.get_by_candidate_and_vacancy(
-            current_user.id,
-            vacancy_id,
+        resume_repository = ResumeRepository(
+            self.repository.db,
+        )
+
+        resume = await resume_repository.get_by_id(
+            data.resume_id,
+        )
+
+        if resume is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Resume not found.",
+            )
+
+        if resume.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only use your own resume.",
+            )
+
+        if not resume.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This resume is not active.",
+            )
+
+        existing = (
+            await self.repository.get_by_candidate_and_vacancy(
+                current_user.id,
+                vacancy_id,
+            )
         )
 
         if existing is not None:
@@ -61,6 +90,7 @@ class ApplicationService:
         application = Application(
             candidate_id=current_user.id,
             vacancy_id=vacancy_id,
+            resume_id=data.resume_id,
             cover_letter=data.cover_letter,
             status=ApplicationStatus.NEW,
         )
@@ -84,8 +114,10 @@ class ApplicationService:
                 detail="Only candidates can view their applications.",
             )
 
-        applications = await self.repository.get_by_candidate_id(
-            current_user.id,
+        applications = (
+            await self.repository.get_by_candidate_id(
+                current_user.id,
+            )
         )
 
         return [
@@ -141,8 +173,10 @@ class ApplicationService:
                 detail="You cannot view applications for this vacancy.",
             )
 
-        applications = await self.repository.get_by_vacancy_id(
-            vacancy_id,
+        applications = (
+            await self.repository.get_by_vacancy_id(
+                vacancy_id,
+            )
         )
 
         return [

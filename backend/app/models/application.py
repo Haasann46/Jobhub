@@ -3,7 +3,6 @@ from sqlalchemy import (
     ForeignKey,
     Text,
 )
-
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.models.base import BaseModel
@@ -14,13 +13,27 @@ class Application(BaseModel):
     __tablename__ = "applications"
 
     candidate_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
+        ForeignKey(
+            "users.id",
+            ondelete="CASCADE",
+        ),
         nullable=False,
     )
 
     vacancy_id: Mapped[int] = mapped_column(
-        ForeignKey("vacancies.id", ondelete="CASCADE"),
+        ForeignKey(
+            "vacancies.id",
+            ondelete="CASCADE",
+        ),
         nullable=False,
+    )
+
+    resume_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "resumes.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=True,
     )
 
     cover_letter: Mapped[str | None] = mapped_column(

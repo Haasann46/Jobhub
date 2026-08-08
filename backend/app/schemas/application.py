@@ -6,6 +6,7 @@ from backend.app.models.enums import ApplicationStatus
 
 
 class ApplicationCreate(BaseModel):
+    resume_id: int
     cover_letter: str | None = None
 
 
@@ -18,6 +19,7 @@ class ApplicationResponse(BaseModel):
 
     candidate_id: int
     vacancy_id: int
+    resume_id: int | None
 
     cover_letter: str | None
 
