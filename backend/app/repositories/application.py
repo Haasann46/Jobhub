@@ -1,26 +1,31 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.models.application import Application
+from backend.app.models.vacancy import Vacancy
 
 
 class ApplicationRepository:
+
     def __init__(
         self,
         db: AsyncSession,
     ):
         self.db = db
 
+
     async def create(
         self,
         application: Application,
     ) -> Application:
+
         self.db.add(application)
 
         await self.db.commit()
         await self.db.refresh(application)
 
         return application
+
 
     async def get_by_id(
         self,
@@ -34,6 +39,7 @@ class ApplicationRepository:
         )
 
         return result.scalar_one_or_none()
+
 
     async def get_by_candidate_id(
         self,
@@ -50,7 +56,10 @@ class ApplicationRepository:
             )
         )
 
-        return list(result.scalars().all())
+        return list(
+            result.scalars().all()
+        )
+
 
     async def get_by_vacancy_id(
         self,
@@ -67,7 +76,10 @@ class ApplicationRepository:
             )
         )
 
-        return list(result.scalars().all())
+        return list(
+            result.scalars().all()
+        )
+
 
     async def get_by_candidate_and_vacancy(
         self,
@@ -84,12 +96,37 @@ class ApplicationRepository:
 
         return result.scalar_one_or_none()
 
+
+    async def count_by_company_id(
+        self,
+        company_id: int,
+    ) -> int:
+
+        result = await self.db.execute(
+            select(
+                func.count(Application.id),
+            )
+            .join(
+                Vacancy,
+                Application.vacancy_id == Vacancy.id,
+            )
+            .where(
+                Vacancy.company_id == company_id,
+            )
+        )
+
+        return result.scalar_one()
+
+
     async def update(
         self,
         application: Application,
     ) -> Application:
 
         await self.db.commit()
-        await self.db.refresh(application)
+
+        await self.db.refresh(
+            application,
+        )
 
         return application

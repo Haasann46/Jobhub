@@ -1,20 +1,24 @@
+import api from "@/services/api";
+
 import {
     Vacancy,
     VacancyListResponse,
     VacancySearchParams,
 } from "@/types/vacancy";
 
+import { API_URL } from "@/constants/api";
 
-const API_URL =
-    process.env.NEXT_PUBLIC_API_URL ??
-    "http://localhost:8000";
 
+/*
+ * Публичный список вакансий
+ */
 
 export async function getVacancies(
     params?: VacancySearchParams,
 ): Promise<VacancyListResponse> {
 
-    const query = new URLSearchParams();
+    const query =
+        new URLSearchParams();
 
 
     if (params?.search) {
@@ -67,7 +71,10 @@ export async function getVacancies(
     }
 
 
-    if (params?.salary_from !== undefined) {
+    if (
+        params?.salary_from !==
+        undefined
+    ) {
 
         query.append(
             "salary_from",
@@ -77,7 +84,10 @@ export async function getVacancies(
     }
 
 
-    if (params?.salary_to !== undefined) {
+    if (
+        params?.salary_to !==
+        undefined
+    ) {
 
         query.append(
             "salary_to",
@@ -87,7 +97,10 @@ export async function getVacancies(
     }
 
 
-    if (params?.is_remote !== undefined) {
+    if (
+        params?.is_remote !==
+        undefined
+    ) {
 
         query.append(
             "is_remote",
@@ -99,13 +112,17 @@ export async function getVacancies(
 
     query.append(
         "page",
-        String(params?.page ?? 1),
+        String(
+            params?.page ?? 1,
+        ),
     );
 
 
     query.append(
         "size",
-        String(params?.size ?? 20),
+        String(
+            params?.size ?? 20,
+        ),
     );
 
 
@@ -115,12 +132,13 @@ export async function getVacancies(
     );
 
 
-    const response = await fetch(
-        `${API_URL}/vacancies?${query.toString()}`,
-        {
-            cache: "no-store",
-        },
-    );
+    const response =
+        await fetch(
+            `${API_URL}/vacancies?${query.toString()}`,
+            {
+                cache: "no-store",
+            },
+        );
 
 
     if (!response.ok) {
@@ -136,21 +154,29 @@ export async function getVacancies(
 }
 
 
+/*
+ * Одна вакансия
+ */
+
 export async function getVacancyById(
     vacancyId: number | string,
 ): Promise<Vacancy> {
 
-    const response = await fetch(
-        `${API_URL}/vacancies/${vacancyId}`,
-        {
-            cache: "no-store",
-        },
-    );
+    const response =
+        await fetch(
+            `${API_URL}/vacancies/${vacancyId}`,
+            {
+                cache: "no-store",
+            },
+        );
 
 
     if (!response.ok) {
 
-        if (response.status === 404) {
+        if (
+            response.status ===
+            404
+        ) {
 
             throw new Error(
                 "Vacancy not found",
@@ -167,4 +193,20 @@ export async function getVacancyById(
 
 
     return response.json();
+}
+
+
+/*
+ * Вакансии текущего работодателя
+ */
+
+export async function getMyVacancies():
+    Promise<Vacancy[]> {
+
+    const response =
+        await api.get<Vacancy[]>(
+            "/vacancies/my",
+        );
+
+    return response.data;
 }

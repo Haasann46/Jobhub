@@ -1,18 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
-import AuthModal from "@/components/modal/AuthModal";
+import AuthModal from "@/components/auth/AuthModal";
 import { useAuthStore } from "@/store/auth";
 
-type AuthMode = "login" | "register";
 
 export default function Header() {
-    const [authModalOpen, setAuthModalOpen] =
-        useState(false);
 
-    const [authMode, setAuthMode] =
-        useState<AuthMode>("login");
+    const router = useRouter();
+    const pathname = usePathname();
 
     const user = useAuthStore(
         (state) => state.user,
@@ -22,166 +21,449 @@ export default function Header() {
         (state) => state.isAuthenticated,
     );
 
+    const initialized = useAuthStore(
+        (state) => state.initialized,
+    );
+
+    const initialize = useAuthStore(
+        (state) => state.initialize,
+    );
+
     const logout = useAuthStore(
         (state) => state.logout,
     );
 
-    const openAuthModal = (mode: AuthMode) => {
-        setAuthMode(mode);
+
+    const [authModalOpen, setAuthModalOpen] =
+        useState(false);
+
+    const [authMode, setAuthMode] =
+        useState<"login" | "register">(
+            "login",
+        );
+
+
+    useEffect(() => {
+
+        if (!initialized) {
+            initialize();
+        }
+
+    }, [
+        initialized,
+        initialize,
+    ]);
+
+
+    function openLogin() {
+
+        setAuthMode("login");
+
         setAuthModalOpen(true);
-    };
+    }
+
+
+    function openRegister() {
+
+        setAuthMode("register");
+
+        setAuthModalOpen(true);
+    }
+
+
+    function handleCabinet() {
+
+        if (!user) {
+            openLogin();
+            return;
+        }
+
+
+        if (user.role === "candidate") {
+
+            router.push("/candidate");
+
+            return;
+        }
+
+
+        if (user.role === "employer") {
+
+            router.push("/employer");
+
+            return;
+        }
+
+
+        if (user.role === "admin") {
+
+            router.push("/admin");
+
+            return;
+        }
+    }
+
+
+    function handleLogout() {
+
+        logout();
+
+        router.push("/");
+    }
+
+
+    function isActive(
+        path: string,
+    ): boolean {
+
+        return pathname === path;
+    }
+
 
     return (
         <>
-            <header>
 
-                <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+            <header
+                className="
+                    sticky
+                    top-0
+                    z-40
+                    border-b
+                    border-slate-200
+                    bg-white/90
+                    backdrop-blur-md
+                "
+            >
+
+                <div
+                    className="
+                        mx-auto
+                        flex
+                        h-16
+                        max-w-7xl
+                        items-center
+                        justify-between
+                        px-4
+                        sm:px-6
+                        lg:px-8
+                    "
+                >
 
                     {/* Logo */}
 
-                    <div className="flex cursor-pointer items-center space-x-3">
+                    <Link
+                        href="/"
+                        className="
+                            flex
+                            items-center
+                            space-x-3
+                        "
+                    >
 
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-xl font-extrabold text-white shadow-md shadow-brand-500/20">
+                        <div
+                            className="
+                                flex
+                                h-10
+                                w-10
+                                items-center
+                                justify-center
+                                rounded-xl
+                                bg-gradient-to-tr
+                                from-brand-600
+                                to-indigo-600
+                                text-xl
+                                font-extrabold
+                                text-white
+                                shadow-md
+                                shadow-brand-500/20
+                            "
+                        >
                             J
                         </div>
 
-                        <span className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-xl font-bold text-transparent">
+
+                        <span
+                            className="
+                                bg-gradient-to-r
+                                from-slate-900
+                                to-slate-700
+                                bg-clip-text
+                                text-xl
+                                font-bold
+                                text-transparent
+                            "
+                        >
                             JobHub
                         </span>
 
-                    </div>
+                    </Link>
 
 
                     {/* Desktop Navigation */}
 
-                    <nav className="hidden space-x-8 md:flex">
+                    <nav
+                        className="
+                            hidden
+                            space-x-8
+                            md:flex
+                        "
+                    >
 
-                        <button
-                            type="button"
-                            className="flex items-center gap-2 text-sm font-semibold text-brand-600 hover:text-brand-700"
+                        <Link
+                            href="/"
+                            className={`
+                                flex
+                                items-center
+                                gap-2
+                                text-sm
+                                font-semibold
+                                transition
+                                ${
+                                    isActive("/")
+                                        ? "text-brand-600"
+                                        : "text-slate-600 hover:text-brand-600"
+                                }
+                            `}
                         >
                             💼
-
                             <span>
                                 Вакансии
                             </span>
-                        </button>
+                        </Link>
 
-                        <button
-                            type="button"
-                            className="flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-brand-600"
+
+                        <Link
+                            href="/?category=Backend"
+                            className="
+                                flex
+                                items-center
+                                gap-2
+                                text-sm
+                                font-medium
+                                text-slate-600
+                                transition
+                                hover:text-brand-600
+                            "
                         >
                             💻
-
                             <span>
                                 Backend
                             </span>
-                        </button>
+                        </Link>
 
-                        <button
-                            type="button"
-                            className="flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-brand-600"
+
+                        <Link
+                            href="/?category=Frontend"
+                            className="
+                                flex
+                                items-center
+                                gap-2
+                                text-sm
+                                font-medium
+                                text-slate-600
+                                transition
+                                hover:text-brand-600
+                            "
                         >
                             🖥️
-
                             <span>
                                 Frontend
                             </span>
-                        </button>
+                        </Link>
 
-                        <button
-                            type="button"
-                            className="flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-brand-600"
+
+                        <Link
+                            href="/?category=Design"
+                            className="
+                                flex
+                                items-center
+                                gap-2
+                                text-sm
+                                font-medium
+                                text-slate-600
+                                transition
+                                hover:text-brand-600
+                            "
                         >
                             🎨
-
                             <span>
                                 Дизайн
                             </span>
-                        </button>
+                        </Link>
 
                     </nav>
 
 
                     {/* Actions */}
 
-                    <div className="flex items-center space-x-3">
+                    <div
+                        className="
+                            flex
+                            items-center
+                            space-x-3
+                        "
+                    >
 
-                        {!isAuthenticated ? (
+                        {!initialized ? (
+
+                            <div
+                                className="
+                                    h-9
+                                    w-24
+                                    animate-pulse
+                                    rounded-xl
+                                    bg-slate-100
+                                "
+                            />
+
+                        ) : isAuthenticated && user ? (
+
                             <>
-                                {/* Разместить вакансию */}
+
+                                {/* Post vacancy */}
+
+                                {user.role === "employer" && (
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            router.push(
+                                                "/employer/vacancies/new",
+                                            )
+                                        }
+                                        className="
+                                            hidden
+                                            items-center
+                                            gap-2
+                                            rounded-xl
+                                            border
+                                            border-emerald-200/60
+                                            bg-emerald-50
+                                            px-4
+                                            py-2
+                                            text-xs
+                                            font-semibold
+                                            text-emerald-600
+                                            transition
+                                            hover:bg-emerald-100
+                                            sm:inline-flex
+                                        "
+                                    >
+                                        ➕
+
+                                        <span>
+                                            Разместить вакансию
+                                        </span>
+
+                                    </button>
+
+                                )}
+
+
+                                {/* Cabinet */}
 
                                 <button
                                     type="button"
-                                    onClick={() =>
-                                        openAuthModal("login")
+                                    onClick={
+                                        handleCabinet
                                     }
-                                    className="hidden items-center gap-2 rounded-xl border border-emerald-200/60 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-600 transition hover:bg-emerald-100 sm:inline-flex"
+                                    className="
+                                        rounded-xl
+                                        px-4
+                                        py-2
+                                        text-sm
+                                        font-semibold
+                                        text-slate-700
+                                        transition
+                                        hover:bg-slate-100
+                                    "
                                 >
-                                    ➕
 
-                                    <span>
-                                        Разместить вакансию
+                                    <span className="hidden sm:inline">
+                                        Кабинет
                                     </span>
+
+                                    <span className="sm:hidden">
+                                        👤
+                                    </span>
+
                                 </button>
-
-
-                                {/* Войти */}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        openAuthModal("login")
-                                    }
-                                    className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                                >
-                                    Войти
-                                </button>
-
-
-                                {/* Регистрация */}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        openAuthModal("register")
-                                    }
-                                    className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-brand-500/20 transition hover:bg-brand-700"
-                                >
-                                    Регистрация
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                {/* User */}
-
-                                <div className="hidden text-right sm:block">
-
-                                    <div className="text-sm font-semibold text-slate-800">
-                                        {user?.email}
-                                    </div>
-
-                                    <div className="text-xs text-slate-400">
-                                        {user?.role === "candidate"
-                                            ? "Кандидат"
-                                            : user?.role === "employer"
-                                                ? "Работодатель"
-                                                : "Администратор"}
-                                    </div>
-
-                                </div>
 
 
                                 {/* Logout */}
 
                                 <button
                                     type="button"
-                                    onClick={logout}
-                                    className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                                    onClick={
+                                        handleLogout
+                                    }
+                                    className="
+                                        rounded-xl
+                                        bg-brand-600
+                                        px-4
+                                        py-2
+                                        text-sm
+                                        font-semibold
+                                        text-white
+                                        shadow-md
+                                        shadow-brand-500/20
+                                        transition
+                                        hover:bg-brand-700
+                                    "
                                 >
                                     Выйти
                                 </button>
+
                             </>
+
+                        ) : (
+
+                            <>
+
+                                <button
+                                    type="button"
+                                    onClick={
+                                        openLogin
+                                    }
+                                    className="
+                                        rounded-xl
+                                        px-4
+                                        py-2
+                                        text-sm
+                                        font-semibold
+                                        text-slate-700
+                                        transition
+                                        hover:bg-slate-100
+                                    "
+                                >
+                                    Войти
+                                </button>
+
+
+                                <button
+                                    type="button"
+                                    onClick={
+                                        openRegister
+                                    }
+                                    className="
+                                        rounded-xl
+                                        bg-brand-600
+                                        px-4
+                                        py-2
+                                        text-sm
+                                        font-semibold
+                                        text-white
+                                        shadow-md
+                                        shadow-brand-500/20
+                                        transition
+                                        hover:bg-brand-700
+                                    "
+                                >
+                                    Регистрация
+                                </button>
+
+                            </>
+
                         )}
 
                     </div>
@@ -191,13 +473,19 @@ export default function Header() {
             </header>
 
 
-            {/* Auth Modal */}
+            {/* Authentication modal */}
 
             <AuthModal
-                isOpen={authModalOpen}
-                mode={authMode}
+                isOpen={
+                    authModalOpen
+                }
+                mode={
+                    authMode
+                }
                 onClose={() =>
-                    setAuthModalOpen(false)
+                    setAuthModalOpen(
+                        false,
+                    )
                 }
             />
 

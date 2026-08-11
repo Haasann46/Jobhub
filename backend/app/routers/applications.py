@@ -11,6 +11,8 @@ from backend.app.schemas.application import (
     ApplicationCreate,
     ApplicationResponse,
     ApplicationStatusUpdate,
+    EmployerApplicationResponse,
+    EmployerApplicationCountResponse,
 )
 from backend.app.services.application import ApplicationService
 
@@ -59,10 +61,29 @@ async def get_my_applications(
         current_user,
     )
 
+@router.get(
+    "/employer/my/count",
+    response_model=EmployerApplicationCountResponse,
+)
+async def get_my_application_count(
+    current_user: User = Depends(
+        get_current_user,
+    ),
+    service: ApplicationService = Depends(
+        get_application_service,
+    ),
+):
+    total = await service.get_my_count(
+        current_user,
+    )
+
+    return EmployerApplicationCountResponse(
+        total=total,
+    )
 
 @router.get(
     "/vacancy/{vacancy_id}",
-    response_model=list[ApplicationResponse],
+    response_model=list[EmployerApplicationResponse],
 )
 async def get_vacancy_applications(
     vacancy_id: int,

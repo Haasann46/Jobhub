@@ -1,12 +1,19 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import (
     Enum as SqlEnum,
     ForeignKey,
     Text,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.models.base import BaseModel
 from backend.app.models.enums import ApplicationStatus
+
+
+if TYPE_CHECKING:
+    from backend.app.models.resume import Resume
+    from backend.app.models.user import User
 
 
 class Application(BaseModel):
@@ -28,12 +35,12 @@ class Application(BaseModel):
         nullable=False,
     )
 
-    resume_id: Mapped[int | None] = mapped_column(
+    resume_id: Mapped[int] = mapped_column(
         ForeignKey(
             "resumes.id",
             ondelete="RESTRICT",
         ),
-        nullable=True,
+        nullable=False,
     )
 
     cover_letter: Mapped[str | None] = mapped_column(
@@ -45,4 +52,14 @@ class Application(BaseModel):
         SqlEnum(ApplicationStatus),
         default=ApplicationStatus.NEW,
         nullable=False,
+    )
+
+    resume: Mapped["Resume"] = relationship(
+        "Resume",
+        lazy="joined",
+    )
+
+    candidate: Mapped["User"] = relationship(
+        "User",
+        lazy="joined",
     )
