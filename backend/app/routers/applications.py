@@ -11,10 +11,12 @@ from backend.app.schemas.application import (
     ApplicationCreate,
     ApplicationResponse,
     ApplicationStatusUpdate,
-    EmployerApplicationResponse,
     EmployerApplicationCountResponse,
+    EmployerApplicationResponse,
 )
-from backend.app.services.application import ApplicationService
+from backend.app.services.application import (
+    ApplicationService,
+)
 
 
 router = APIRouter(
@@ -22,6 +24,10 @@ router = APIRouter(
     tags=["Applications"],
 )
 
+
+# ============================================================
+# Создание отклика
+# ============================================================
 
 @router.post(
     "/vacancy/{vacancy_id}",
@@ -45,6 +51,10 @@ async def create_application(
     )
 
 
+# ============================================================
+# Мои отклики кандидата
+# ============================================================
+
 @router.get(
     "/my",
     response_model=list[ApplicationResponse],
@@ -60,6 +70,11 @@ async def get_my_applications(
     return await service.get_my(
         current_user,
     )
+
+
+# ============================================================
+# Количество откликов работодателя
+# ============================================================
 
 @router.get(
     "/employer/my/count",
@@ -81,6 +96,11 @@ async def get_my_application_count(
         total=total,
     )
 
+
+# ============================================================
+# Отклики на конкретную вакансию
+# ============================================================
+
 @router.get(
     "/vacancy/{vacancy_id}",
     response_model=list[EmployerApplicationResponse],
@@ -100,9 +120,13 @@ async def get_vacancy_applications(
     )
 
 
+# ============================================================
+# Изменение статуса отклика
+# ============================================================
+
 @router.patch(
     "/{application_id}/status",
-    response_model=ApplicationResponse,
+    response_model=EmployerApplicationResponse,
 )
 async def update_application_status(
     application_id: int,

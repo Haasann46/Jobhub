@@ -20,6 +20,8 @@ import {
 
 import JobApplyModal from "@/components/modal/JobApplyModal";
 
+import FavoriteButton from "@/components/vacancy/FavoriteButton";
+
 
 interface VacancyCardProps {
     vacancy: Vacancy;
@@ -166,24 +168,32 @@ export default function VacancyCard({
                     </div>
 
 
-                    <div className="text-left sm:text-right">
+                    <div className="flex flex-col items-end">
 
-                        <span className="block text-base font-extrabold text-slate-900">
+                        <FavoriteButton
+                            vacancyId={vacancy.id}
+                        />
 
-                            {formatSalary(
-                                vacancy.salary_from,
-                                vacancy.salary_to,
-                            )}
+                        <div className="mt-1 text-right">
 
-                        </span>
+                            <span className="block text-base font-extrabold text-slate-900">
 
-                        <span className="mt-1 inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-600">
+                                {formatSalary(
+                                    vacancy.salary_from,
+                                    vacancy.salary_to,
+                                )}
 
-                            {formatExperience(
-                                vacancy.experience_level,
-                            )}
+                            </span>
 
-                        </span>
+                            <span className="mt-1 inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-600">
+
+                                {formatExperience(
+                                    vacancy.experience_level,
+                                )}
+
+                            </span>
+
+                        </div>
 
                     </div>
 

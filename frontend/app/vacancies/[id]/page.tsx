@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 
 import { useVacancy } from "@/hooks/use-vacancy";
 
+import FavoriteButton from "@/components/vacancy/FavoriteButton";
+
 
 function formatSalary(
     salaryFrom: number | null,
@@ -329,69 +331,84 @@ export default function VacancyPage() {
 
                     {/* Header */}
 
-                    <div className="mb-6 flex items-start gap-4">
+                    <div className="mb-6 flex items-start justify-between gap-5">
 
-                        {vacancy.company_logo ? (
+                        <div className="flex min-w-0 items-start gap-4">
 
-                            <img
-                                src={vacancy.company_logo}
-                                alt={vacancy.company_name}
-                                className="h-16 w-16 shrink-0 rounded-2xl border border-slate-100 object-cover"
-                            />
+                            {vacancy.company_logo ? (
 
-                        ) : (
+                                <img
+                                    src={vacancy.company_logo}
+                                    alt={vacancy.company_name}
+                                    className="h-16 w-16 shrink-0 rounded-2xl border border-slate-100 object-cover"
+                                />
 
-                            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-xl font-bold text-white">
+                            ) : (
 
-                                {vacancy.company_name
-                                    .charAt(0)
-                                    .toUpperCase()}
+                                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-xl font-bold text-white">
 
-                            </div>
+                                    {vacancy.company_name
+                                        .charAt(0)
+                                        .toUpperCase()}
 
-                        )}
+                                </div>
 
-
-                        <div className="min-w-0">
-
-                            <div className="flex flex-wrap items-center gap-2">
-
-                                <span className="rounded-md bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-600">
-
-                                    {vacancy.category}
-
-                                </span>
+                            )}
 
 
-                                {publishedDate && (
+                            <div className="min-w-0">
 
-                                    <span className="text-xs text-slate-400">
+                                <div className="flex flex-wrap items-center gap-2">
 
-                                        {publishedDate}
+                                    <span className="rounded-md bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-600">
+
+                                        {vacancy.category}
 
                                     </span>
 
-                                )}
+
+                                    {publishedDate && (
+
+                                        <span className="text-xs text-slate-400">
+
+                                            {publishedDate}
+
+                                        </span>
+
+                                    )}
+
+                                </div>
+
+
+                                <h1 className="mt-2 text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">
+
+                                    {vacancy.title}
+
+                                </h1>
+
+
+                                <p className="mt-2 text-sm text-slate-500">
+
+                                    {vacancy.company_name}
+
+                                    {" • "}
+
+                                    {vacancy.location}
+
+                                </p>
 
                             </div>
 
-
-                            <h1 className="mt-2 text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">
-
-                                {vacancy.title}
-
-                            </h1>
+                        </div>
 
 
-                            <p className="mt-2 text-sm text-slate-500">
+                        {/* Favorite */}
 
-                                {vacancy.company_name}
+                        <div className="shrink-0 pt-1">
 
-                                {" • "}
-
-                                {vacancy.location}
-
-                            </p>
+                            <FavoriteButton
+                                vacancyId={vacancy.id}
+                            />
 
                         </div>
 

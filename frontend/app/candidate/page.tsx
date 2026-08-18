@@ -29,6 +29,12 @@ import {
 
 import ResumeModal from "@/components/candidate/ResumeModal";
 
+import ChatPanel from "@/components/chat/ChatPanel";
+
+import {
+    useSearchParams,
+} from "next/navigation";
+
 
 function formatDate(
     value: string,
@@ -103,43 +109,110 @@ function getStatusClass(
 
 export default function CandidatePage() {
 
-    const user = useAuthStore(
-        (state) => state.user,
+    const searchParams =
+        useSearchParams();
+
+
+    /*
+     * ============================================================
+     * Conversation из notification
+     * ============================================================
+     */
+
+    const conversationIdParam =
+        searchParams.get(
+            "conversation",
+        );
+
+
+    const parsedConversationId =
+        conversationIdParam
+            ? Number(
+                conversationIdParam,
+            )
+            : null;
+
+
+    const conversationId =
+        parsedConversationId !== null
+        &&
+        Number.isInteger(
+            parsedConversationId,
+        )
+        &&
+        parsedConversationId > 0
+            ? parsedConversationId
+            : undefined;
+
+
+    const user =
+        useAuthStore(
+            (state) => state.user,
+        );
+
+
+    const initialized =
+        useAuthStore(
+            (state) => state.initialized,
+        );
+
+
+    const initialize =
+        useAuthStore(
+            (state) => state.initialize,
+        );
+
+
+    const [
+        resumes,
+        setResumes,
+    ] = useState<Resume[]>([]);
+
+
+    const [
+        applications,
+        setApplications,
+    ] = useState<Application[]>([]);
+
+
+    const [
+        loading,
+        setLoading,
+    ] = useState(true);
+
+
+    const [
+        error,
+        setError,
+    ] = useState<string | null>(null);
+
+
+    const [
+        resumeModalOpen,
+        setResumeModalOpen,
+    ] = useState(false);
+
+
+    const [
+        editingResume,
+        setEditingResume,
+    ] = useState<Resume | null>(
+        null,
     );
 
-    const initialized = useAuthStore(
-        (state) => state.initialized,
-    );
 
-    const initialize = useAuthStore(
-        (state) => state.initialize,
-    );
-
-
-    const [resumes, setResumes] =
-        useState<Resume[]>([]);
-
-    const [applications, setApplications] =
-        useState<Application[]>([]);
-
-    const [loading, setLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState<string | null>(null);
-
-
-    const [resumeModalOpen, setResumeModalOpen] =
-        useState(false);
-
-    const [editingResume, setEditingResume] =
-        useState<Resume | null>(null);
-
+    /*
+     * ============================================================
+     * Авторизация
+     * ============================================================
+     */
 
     useEffect(() => {
 
         if (!initialized) {
+
             initialize();
+
         }
 
     }, [
@@ -148,21 +221,32 @@ export default function CandidatePage() {
     ]);
 
 
+    /*
+     * ============================================================
+     * Загрузка кабинета
+     * ============================================================
+     */
+
     useEffect(() => {
 
         if (!initialized) {
             return;
         }
 
+
         if (!user) {
+
             setLoading(false);
+
             return;
         }
+
 
         async function load() {
 
             setLoading(true);
             setError(null);
+
 
             try {
 
@@ -174,9 +258,11 @@ export default function CandidatePage() {
                     getMyApplications(),
                 ]);
 
+
                 setResumes(
                     resumesResponse,
                 );
+
 
                 setApplications(
                     applicationsResponse,
@@ -188,7 +274,10 @@ export default function CandidatePage() {
                     error?.response?.data?.detail ??
                     "Не удалось загрузить данные кабинета.";
 
-                setError(message);
+
+                setError(
+                    message,
+                );
 
             } finally {
 
@@ -197,11 +286,119 @@ export default function CandidatePage() {
             }
         }
 
+
         load();
 
     }, [
         initialized,
         user,
+    ]);
+
+
+    /*
+     * ============================================================
+     * Переход к чату после notification
+     * ============================================================
+     *
+     * Важно:
+     *
+     * ChatPanel находится ниже списка резюме и откликов.
+     *
+     * Поэтому нельзя сделать один setTimeout
+     * и надеяться, что элемент уже существует.
+     *
+     * Пытаемся найти его несколько раз.
+     * ============================================================
+     */
+
+    useEffect(() => {
+
+        if (
+            conversationId === undefined
+        ) {
+            return;
+        }
+
+
+        if (
+            !initialized
+            ||
+            !user
+        ) {
+            return;
+        }
+
+
+        if (
+            user.role !==
+            "candidate"
+        ) {
+            return;
+        }
+
+
+        let attempts = 0;
+
+        const maxAttempts = 30;
+
+
+        const scrollToChat =
+            () => {
+
+                const chatElement =
+                    document.getElementById(
+                        "candidate-chat",
+                    );
+
+
+                if (chatElement) {
+
+                    chatElement.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                    });
+
+                    return;
+                }
+
+
+                attempts += 1;
+
+
+                if (
+                    attempts <
+                    maxAttempts
+                ) {
+
+                    window.setTimeout(
+                        scrollToChat,
+                        150,
+                    );
+
+                }
+            };
+
+
+        const timer =
+            window.setTimeout(
+                scrollToChat,
+                100,
+            );
+
+
+        return () => {
+
+            window.clearTimeout(
+                timer,
+            );
+
+        };
+
+    }, [
+        conversationId,
+        initialized,
+        user,
+        loading,
     ]);
 
 
@@ -214,15 +411,18 @@ export default function CandidatePage() {
                 `Удалить резюме «${resume.title}»?`,
             );
 
+
         if (!confirmed) {
             return;
         }
+
 
         try {
 
             await deleteResume(
                 resume.id,
             );
+
 
             setResumes(
                 (current) =>
@@ -238,7 +438,10 @@ export default function CandidatePage() {
                 error?.response?.data?.detail ??
                 "Не удалось удалить резюме.";
 
-            setError(message);
+
+            setError(
+                message,
+            );
 
         }
     }
@@ -258,6 +461,7 @@ export default function CandidatePage() {
                             savedResume.id,
                     );
 
+
                 if (exists) {
 
                     return current.map(
@@ -270,6 +474,7 @@ export default function CandidatePage() {
 
                 }
 
+
                 return [
                     savedResume,
                     ...current,
@@ -279,7 +484,17 @@ export default function CandidatePage() {
     }
 
 
-    if (!initialized || loading) {
+    /*
+     * ============================================================
+     * Loading
+     * ============================================================
+     */
+
+    if (
+        !initialized
+        ||
+        loading
+    ) {
 
         return (
             <main className="flex flex-1 items-center justify-center px-4 py-16">
@@ -295,6 +510,12 @@ export default function CandidatePage() {
     }
 
 
+    /*
+     * ============================================================
+     * Не авторизован
+     * ============================================================
+     */
+
     if (!user) {
 
         return (
@@ -306,9 +527,11 @@ export default function CandidatePage() {
                         🔐
                     </div>
 
+
                     <h1 className="text-xl font-bold text-slate-900">
                         Требуется авторизация
                     </h1>
+
 
                     <p className="mt-2 text-sm text-slate-500">
                         Войдите в аккаунт, чтобы открыть кабинет.
@@ -321,7 +544,16 @@ export default function CandidatePage() {
     }
 
 
-    if (user.role !== "candidate") {
+    /*
+     * ============================================================
+     * Не кандидат
+     * ============================================================
+     */
+
+    if (
+        user.role !==
+        "candidate"
+    ) {
 
         return (
             <main className="mx-auto w-full max-w-3xl px-4 py-16">
@@ -332,9 +564,11 @@ export default function CandidatePage() {
                         🏢
                     </div>
 
+
                     <h1 className="text-xl font-bold text-slate-900">
                         Кабинет кандидата
                     </h1>
+
 
                     <p className="mt-2 text-sm text-slate-500">
                         Этот раздел доступен только кандидатам.
@@ -352,17 +586,17 @@ export default function CandidatePage() {
 
             <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
 
-                {/* Header */}
-
                 <div className="mb-8">
 
                     <p className="text-sm font-medium text-brand-600">
                         Личный кабинет
                     </p>
 
+
                     <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">
                         Кабинет кандидата
                     </h1>
+
 
                     <p className="mt-2 text-sm text-slate-500">
                         Управляйте резюме и отслеживайте свои отклики.
@@ -394,8 +628,6 @@ export default function CandidatePage() {
 
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">
 
-                    {/* Profile */}
-
                     <aside>
 
                         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -413,6 +645,7 @@ export default function CandidatePage() {
                                 Кандидат
                             </h2>
 
+
                             <p className="mt-1 break-all text-sm text-slate-500">
                                 {user.email}
                             </p>
@@ -425,6 +658,7 @@ export default function CandidatePage() {
                                     <span className="text-slate-500">
                                         Резюме
                                     </span>
+
 
                                     <span className="font-bold text-slate-900">
                                         {resumes.length}
@@ -439,6 +673,7 @@ export default function CandidatePage() {
                                         Отклики
                                     </span>
 
+
                                     <span className="font-bold text-slate-900">
                                         {applications.length}
                                     </span>
@@ -451,8 +686,6 @@ export default function CandidatePage() {
 
                     </aside>
 
-
-                    {/* Content */}
 
                     <div className="space-y-8">
 
@@ -467,6 +700,7 @@ export default function CandidatePage() {
                                     <h2 className="text-xl font-bold text-slate-900">
                                         Мои резюме
                                     </h2>
+
 
                                     <p className="mt-1 text-sm text-slate-500">
                                         Резюме, которые можно использовать при отклике.
@@ -512,13 +746,16 @@ export default function CandidatePage() {
                                         📄
                                     </div>
 
+
                                     <h3 className="mt-3 font-bold text-slate-800">
                                         У вас пока нет резюме
                                     </h3>
 
+
                                     <p className="mt-1 text-sm text-slate-500">
                                         Создайте первое резюме, чтобы откликаться на вакансии.
                                     </p>
+
 
                                     <button
                                         type="button"
@@ -576,6 +813,7 @@ export default function CandidatePage() {
                                                                 {resume.title}
                                                             </h3>
 
+
                                                             {resume.is_active && (
 
                                                                 <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-600">
@@ -599,6 +837,7 @@ export default function CandidatePage() {
                                                                     📍 {resume.city}
                                                                 </span>
                                                             )}
+
 
                                                             {resume.salary_expectation !== null && (
                                                                 <span className="rounded-lg bg-slate-100 px-2.5 py-1">
@@ -701,6 +940,7 @@ export default function CandidatePage() {
                                     Мои отклики
                                 </h2>
 
+
                                 <p className="mt-1 text-sm text-slate-500">
                                     История отправленных откликов и их текущий статус.
                                 </p>
@@ -716,9 +956,11 @@ export default function CandidatePage() {
                                         📬
                                     </div>
 
+
                                     <h3 className="mt-3 font-bold text-slate-800">
                                         Откликов пока нет
                                     </h3>
+
 
                                     <p className="mt-1 text-sm text-slate-500">
                                         Найдите подходящую вакансию и отправьте отклик.
@@ -764,7 +1006,8 @@ export default function CandidatePage() {
 
 
                                                         <p className="mt-1 text-sm text-slate-500">
-                                                            Отправлен {formatDate(
+                                                            Отправлен{" "}
+                                                            {formatDate(
                                                                 application.created_at,
                                                             )}
                                                         </p>
@@ -813,6 +1056,23 @@ export default function CandidatePage() {
                                 </div>
 
                             )}
+
+                        </section>
+
+
+                        {/* ================================================== */}
+                        {/* Chat */}
+                        {/* ================================================== */}
+
+                        <section
+                            id="candidate-chat"
+                        >
+
+                            <ChatPanel
+                                conversationId={
+                                    conversationId
+                                }
+                            />
 
                         </section>
 

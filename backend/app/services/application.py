@@ -3,11 +3,13 @@ from fastapi import HTTPException, status
 from backend.app.models.application import Application
 from backend.app.models.enums import (
     ApplicationStatus,
+    NotificationType,
     UserRole,
 )
 from backend.app.models.user import User
 from backend.app.repositories.application import ApplicationRepository
 from backend.app.repositories.company import CompanyRepository
+from backend.app.repositories.notification import NotificationRepository
 from backend.app.repositories.resume import ResumeRepository
 from backend.app.repositories.vacancy import VacancyRepository
 from backend.app.schemas.application import (
@@ -16,6 +18,7 @@ from backend.app.schemas.application import (
     ApplicationStatusUpdate,
     EmployerApplicationResponse,
 )
+from backend.app.services.notification import NotificationService
 
 
 class ApplicationService:
@@ -25,6 +28,19 @@ class ApplicationService:
         repository: ApplicationRepository,
     ):
         self.repository = repository
+
+
+    async def _get_notification_service(
+        self,
+    ) -> NotificationService:
+
+        notification_repository = NotificationRepository(
+            self.repository.db,
+        )
+
+        return NotificationService(
+            notification_repository,
+        )
 
 
     async def create(
@@ -108,9 +124,38 @@ class ApplicationService:
             status=ApplicationStatus.NEW,
         )
 
+
         application = await self.repository.create(
             application,
         )
+
+
+        company_repository = CompanyRepository(
+            self.repository.db,
+        )
+
+        company = await company_repository.get_by_id(
+            vacancy.company_id,
+        )
+
+        if company is not None:
+
+            notification_service = (
+                await self._get_notification_service()
+            )
+
+            await notification_service.create(
+                recipient_id=company.owner_id,
+                notification_type=NotificationType.NEW_APPLICATION,
+                title="Новый отклик",
+                message=(
+                    f'На вакансию "{vacancy.title}" '
+                    "поступил новый отклик."
+                ),
+                application_id=application.id,
+                vacancy_id=vacancy.id,
+            )
+
 
         return ApplicationResponse.model_validate(
             application,
@@ -128,12 +173,14 @@ class ApplicationService:
                 detail="Only candidates can view their applications.",
             )
 
+
         applications = (
             await self.repository
             .get_by_candidate_id(
                 current_user.id,
             )
         )
+
 
         return [
             ApplicationResponse.model_validate(
@@ -142,9 +189,10 @@ class ApplicationService:
             for application in applications
         ]
 
+
     async def get_my_count(
-            self,
-            current_user: User,
+        self,
+        current_user: User,
     ) -> int:
 
         if current_user.role != UserRole.EMPLOYER:
@@ -152,6 +200,7 @@ class ApplicationService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only employers can view application count.",
             )
+
 
         company_repository = CompanyRepository(
             self.repository.db,
@@ -167,9 +216,11 @@ class ApplicationService:
                 detail="Company not found.",
             )
 
+
         return await self.repository.count_by_company_id(
             company.id,
         )
+
 
     async def get_by_vacancy(
         self,
@@ -228,6 +279,7 @@ class ApplicationService:
             )
         )
 
+
         return [
             EmployerApplicationResponse(
                 id=application.id,
@@ -249,7 +301,7 @@ class ApplicationService:
         application_id: int,
         current_user: User,
         data: ApplicationStatusUpdate,
-    ) -> ApplicationResponse:
+    ) -> EmployerApplicationResponse:
 
         if current_user.role != UserRole.EMPLOYER:
             raise HTTPException(
@@ -306,12 +358,58 @@ class ApplicationService:
             )
 
 
+        old_status = application.status
+
         application.status = data.status
+
 
         application = await self.repository.update(
             application,
         )
 
-        return ApplicationResponse.model_validate(
-            application,
+
+        if old_status != data.status:
+
+            notification_service = (
+                await self._get_notification_service()
+            )
+
+            await notification_service.create(
+                recipient_id=application.candidate_id,
+                notification_type=NotificationType.APPLICATION_STATUS_CHANGED,
+                title="Статус отклика изменён",
+                message=(
+                    f'Статус вашего отклика на вакансию '
+                    f'"{vacancy.title}" изменён.'
+                ),
+                application_id=application.id,
+                vacancy_id=vacancy.id,
+            )
+
+
+        #
+        # Re-read the application after commit so the response contains
+        # the persisted status and all required relationships.
+
+        refreshed_application = await self.repository.get_by_id(
+            application_id,
+        )
+
+        if refreshed_application is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Application not found after update.",
+            )
+
+
+        return EmployerApplicationResponse(
+            id=refreshed_application.id,
+            candidate_id=refreshed_application.candidate_id,
+            candidate_email=refreshed_application.candidate.email,
+            vacancy_id=refreshed_application.vacancy_id,
+            resume=refreshed_application.resume,
+            cover_letter=refreshed_application.cover_letter,
+            status=refreshed_application.status,
+            created_at=refreshed_application.created_at,
+            updated_at=refreshed_application.updated_at,
         )

@@ -8,38 +8,10 @@ import {
 } from "@/types/application";
 
 
-function getAccessToken(): string | null {
-
-    if (
-        typeof window === "undefined"
-    ) {
-        return null;
-    }
-
-    return localStorage.getItem(
-        "access_token",
-    );
-}
-
-
-function getAuthConfig() {
-
-    const token =
-        getAccessToken();
-
-    return {
-        headers: token
-            ? {
-                Authorization:
-                    `Bearer ${token}`,
-            }
-            : undefined,
-    };
-}
-
-
 /*
+ * ============================================================
  * Создание отклика кандидатом
+ * ============================================================
  */
 
 export async function createApplication(
@@ -51,7 +23,6 @@ export async function createApplication(
         await api.post<Application>(
             `/applications/vacancy/${vacancyId}`,
             data,
-            getAuthConfig(),
         );
 
     return response.data;
@@ -59,7 +30,9 @@ export async function createApplication(
 
 
 /*
+ * ============================================================
  * Мои отклики кандидата
+ * ============================================================
  */
 
 export async function getMyApplications():
@@ -68,7 +41,6 @@ export async function getMyApplications():
     const response =
         await api.get<Application[]>(
             "/applications/my",
-            getAuthConfig(),
         );
 
     return response.data;
@@ -76,7 +48,9 @@ export async function getMyApplications():
 
 
 /*
+ * ============================================================
  * Отклики на вакансию работодателя
+ * ============================================================
  */
 
 export async function getVacancyApplications(
@@ -84,11 +58,8 @@ export async function getVacancyApplications(
 ): Promise<EmployerApplication[]> {
 
     const response =
-        await api.get<
-            EmployerApplication[]
-        >(
+        await api.get<EmployerApplication[]>(
             `/applications/vacancy/${vacancyId}`,
-            getAuthConfig(),
         );
 
     return response.data;
@@ -96,7 +67,9 @@ export async function getVacancyApplications(
 
 
 /*
+ * ============================================================
  * Изменение статуса отклика
+ * ============================================================
  */
 
 export async function updateApplicationStatus(
@@ -105,27 +78,31 @@ export async function updateApplicationStatus(
 ): Promise<EmployerApplication> {
 
     const response =
-        await api.patch<
-            EmployerApplication
-        >(
+        await api.patch<EmployerApplication>(
             `/applications/${applicationId}/status`,
             {
                 status,
             },
-            getAuthConfig(),
         );
 
     return response.data;
 }
 
-export async function getMyEmployerApplicationCount(): Promise<number> {
+
+/*
+ * ============================================================
+ * Количество откликов работодателя
+ * ============================================================
+ */
+
+export async function getMyEmployerApplicationCount():
+    Promise<number> {
 
     const response =
         await api.get<{
             total: number;
         }>(
             "/applications/employer/my/count",
-            getAuthConfig(),
         );
 
     return response.data.total;

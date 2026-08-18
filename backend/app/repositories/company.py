@@ -12,6 +12,21 @@ class CompanyRepository:
     ):
         self.db = db
 
+
+    async def get_by_id(
+        self,
+        company_id: int,
+    ) -> Company | None:
+
+        result = await self.db.execute(
+            select(Company).where(
+                Company.id == company_id,
+            )
+        )
+
+        return result.scalar_one_or_none()
+
+
     async def get_by_owner_id(
         self,
         owner_id: int,
@@ -19,11 +34,12 @@ class CompanyRepository:
 
         result = await self.db.execute(
             select(Company).where(
-                Company.owner_id == owner_id
+                Company.owner_id == owner_id,
             )
         )
 
         return result.scalar_one_or_none()
+
 
     async def create(
         self,
@@ -34,9 +50,12 @@ class CompanyRepository:
 
         await self.db.commit()
 
-        await self.db.refresh(company)
+        await self.db.refresh(
+            company,
+        )
 
         return company
+
 
     async def update(
         self,
@@ -45,6 +64,8 @@ class CompanyRepository:
 
         await self.db.commit()
 
-        await self.db.refresh(company)
+        await self.db.refresh(
+            company,
+        )
 
         return company

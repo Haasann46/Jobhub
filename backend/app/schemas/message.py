@@ -3,11 +3,18 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
-class FavoriteResponse(BaseModel):
+class MessageCreate(BaseModel):
+    content: str
+
+
+class MessageResponse(BaseModel):
     id: int
 
-    user_id: int
-    vacancy_id: int
+    conversation_id: int
+    sender_id: int
+
+    content: str
+    is_read: bool
 
     created_at: datetime
     updated_at: datetime
@@ -15,7 +22,3 @@ class FavoriteResponse(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,
     )
-
-
-class FavoriteCheckResponse(BaseModel):
-    is_favorite: bool

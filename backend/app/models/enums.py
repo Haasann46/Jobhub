@@ -40,3 +40,11 @@ class ApplicationStatus(str, Enum):
     INTERVIEW = "interview"
     REJECTED = "rejected"
     HIRED = "hired"
+
+
+class NotificationType(str, Enum):
+    NEW_APPLICATION = "new_application"
+    NEW_MESSAGE = "new_message"
+    APPLICATION_STATUS_CHANGED = "application_status_changed"
+    INVITATION = "invitation"
+    NEW_VACANCY = "new_vacancy"

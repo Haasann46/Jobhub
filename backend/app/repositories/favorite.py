@@ -1,7 +1,10 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from backend.app.models.company import Company
 from backend.app.models.favorite import Favorite
+from backend.app.models.vacancy import Vacancy
 
 
 class FavoriteRepository:
@@ -16,21 +19,11 @@ class FavoriteRepository:
         favorite: Favorite,
     ) -> Favorite:
         self.db.add(favorite)
+
         await self.db.commit()
         await self.db.refresh(favorite)
+
         return favorite
-
-    async def get_by_user_id(
-        self,
-        user_id: int,
-    ) -> list[Favorite]:
-        result = await self.db.execute(
-            select(Favorite).where(
-                Favorite.user_id == user_id,
-            )
-        )
-
-        return list(result.scalars().all())
 
     async def get_by_user_and_vacancy(
         self,
@@ -46,9 +39,41 @@ class FavoriteRepository:
 
         return result.scalar_one_or_none()
 
+    async def get_favorite_vacancies(
+        self,
+        user_id: int,
+    ) -> list[Vacancy]:
+        result = await self.db.execute(
+            select(Vacancy)
+            .join(
+                Favorite,
+                Favorite.vacancy_id == Vacancy.id,
+            )
+            .options(
+                selectinload(
+                    Vacancy.company,
+                ),
+                selectinload(
+                    Vacancy.technologies,
+                ),
+            )
+            .where(
+                Favorite.user_id == user_id,
+                Vacancy.is_active.is_(True),
+            )
+            .order_by(
+                Favorite.created_at.desc(),
+            )
+        )
+
+        return list(
+            result.scalars().all()
+        )
+
     async def delete(
         self,
         favorite: Favorite,
     ) -> None:
         await self.db.delete(favorite)
+
         await self.db.commit()

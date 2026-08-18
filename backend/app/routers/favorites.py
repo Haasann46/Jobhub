@@ -7,8 +7,13 @@ from fastapi import (
 from backend.app.dependencies.current_user import get_current_user
 from backend.app.dependencies.favorite import get_favorite_service
 from backend.app.models.user import User
-from backend.app.schemas.favorite import FavoriteResponse
+from backend.app.schemas.favorite import (
+    FavoriteCheckResponse,
+    FavoriteResponse,
+)
+from backend.app.schemas.vacancy import VacancyResponse
 from backend.app.services.favorite import FavoriteService
+
 
 router = APIRouter(
     tags=["Favorites"],
@@ -37,7 +42,7 @@ async def create_favorite(
 
 @router.get(
     "/my",
-    response_model=list[FavoriteResponse],
+    response_model=list[VacancyResponse],
 )
 async def get_my_favorites(
     current_user: User = Depends(
@@ -48,6 +53,25 @@ async def get_my_favorites(
     ),
 ):
     return await service.get_my(
+        current_user,
+    )
+
+
+@router.get(
+    "/{vacancy_id}/check",
+    response_model=FavoriteCheckResponse,
+)
+async def check_favorite(
+    vacancy_id: int,
+    current_user: User = Depends(
+        get_current_user,
+    ),
+    service: FavoriteService = Depends(
+        get_favorite_service,
+    ),
+):
+    return await service.check(
+        vacancy_id,
         current_user,
     )
 

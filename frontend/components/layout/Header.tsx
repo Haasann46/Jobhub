@@ -6,8 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import AuthModal from "@/components/auth/AuthModal";
 import { useAuthStore } from "@/store/auth";
-
-
+import NotificationDropdown from "@/components/notifications/NotificationDropdown";
 export default function Header() {
 
     const router = useRouter();
@@ -359,6 +358,52 @@ export default function Header() {
 
                                 )}
 
+                                {/* Notifications */}
+
+                                <NotificationDropdown />
+
+                                 {/* Favorites */}
+
+                                {user.role === "candidate" && (
+
+                                    <Link
+                                        href="/candidate/favorites"
+                                        aria-label="Избранное"
+                                        title="Избранное"
+                                        className="
+                                            flex
+                                            h-10
+                                            w-10
+                                            items-center
+                                            justify-center
+                                            rounded-xl
+                                            text-slate-500
+                                            transition
+                                            hover:bg-red-50
+                                            hover:text-red-500
+                                        "
+                                    >
+
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="h-6 w-6"
+                                        >
+
+                                            <path
+                                                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z"
+                                                stroke="currentColor"
+                                                strokeWidth="1.8"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            />
+
+                                        </svg>
+
+                                    </Link>
+
+                                )}
 
                                 {/* Cabinet */}
 

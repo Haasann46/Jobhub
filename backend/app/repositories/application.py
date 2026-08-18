@@ -1,5 +1,6 @@
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from backend.app.models.application import Application
 from backend.app.models.vacancy import Vacancy
@@ -33,7 +34,12 @@ class ApplicationRepository:
     ) -> Application | None:
 
         result = await self.db.execute(
-            select(Application).where(
+            select(Application)
+            .options(
+                selectinload(Application.candidate),
+                selectinload(Application.resume),
+            )
+            .where(
                 Application.id == application_id,
             )
         )
@@ -68,6 +74,10 @@ class ApplicationRepository:
 
         result = await self.db.execute(
             select(Application)
+            .options(
+                selectinload(Application.candidate),
+                selectinload(Application.resume),
+            )
             .where(
                 Application.vacancy_id == vacancy_id,
             )

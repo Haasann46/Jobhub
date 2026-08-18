@@ -1,9 +1,9 @@
 export type ApplicationStatus =
-    | "NEW"
-    | "REVIEWING"
-    | "INTERVIEW"
-    | "REJECTED"
-    | "HIRED";
+    | "new"
+    | "reviewing"
+    | "interview"
+    | "rejected"
+    | "hired";
 
 
 export interface ApplicationCreate {

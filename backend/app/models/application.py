@@ -4,7 +4,9 @@ from sqlalchemy import (
     Enum as SqlEnum,
     ForeignKey,
     Text,
+    UniqueConstraint,
 )
+
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.models.base import BaseModel
@@ -18,6 +20,14 @@ if TYPE_CHECKING:
 
 class Application(BaseModel):
     __tablename__ = "applications"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "candidate_id",
+            "vacancy_id",
+            name="uq_candidate_vacancy",
+        ),
+    )
 
     candidate_id: Mapped[int] = mapped_column(
         ForeignKey(

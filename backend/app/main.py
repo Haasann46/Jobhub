@@ -9,6 +9,9 @@ from backend.app.routers import company
 from backend.app.routers import vacancies
 from backend.app.routers import applications
 from backend.app.routers import resumes
+from backend.app.routers import conversations
+from backend.app.routers import messages
+from backend.app.routers import notifications
 from backend.app.routers import favorites
 
 # ── Создаём приложение FastAPI ────────────────────────────────────────────────
@@ -71,6 +74,25 @@ app.include_router(
     tags=["Resumes"],
 )
 
+app.include_router(
+    conversations.router,
+    prefix="/api",
+)
+
+app.include_router(
+    messages.router,
+    prefix="/api",
+)
+
+app.include_router(
+    notifications.router,
+    prefix="/api",
+)
+
+app.include_router(
+    favorites.router,
+    prefix="/api/favorites",
+)
 
 @app.get("/", tags=["System"])
 async def root():
