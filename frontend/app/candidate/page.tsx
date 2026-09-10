@@ -11,8 +11,13 @@ import {
 
 import {
     deleteResume,
+    downloadResumePdf,
     getMyResumes,
 } from "@/services/resume";
+
+import {
+    getMyProfile,
+} from "@/services/profile";
 
 import {
     useAuthStore,
@@ -27,7 +32,13 @@ import {
     Resume,
 } from "@/types/resume";
 
+import {
+    Profile,
+} from "@/types/profile";
+
 import ResumeModal from "@/components/candidate/ResumeModal";
+
+import ProfileModal from "@/components/candidate/ProfileModal";
 
 import ChatPanel from "@/components/chat/ChatPanel";
 
@@ -145,6 +156,12 @@ export default function CandidatePage() {
             : undefined;
 
 
+    /*
+     * ============================================================
+     * Auth
+     * ============================================================
+     */
+
     const user =
         useAuthStore(
             (state) => state.user,
@@ -163,17 +180,55 @@ export default function CandidatePage() {
         );
 
 
+    /*
+     * ============================================================
+     * Profile
+     * ============================================================
+     */
+
+    const [
+        profile,
+        setProfile,
+    ] = useState<Profile | null>(
+        null,
+    );
+
+
+    const [
+        profileModalOpen,
+        setProfileModalOpen,
+    ] = useState(false);
+
+
+    /*
+     * ============================================================
+     * Resumes
+     * ============================================================
+     */
+
     const [
         resumes,
         setResumes,
     ] = useState<Resume[]>([]);
 
 
+    /*
+     * ============================================================
+     * Applications
+     * ============================================================
+     */
+
     const [
         applications,
         setApplications,
     ] = useState<Application[]>([]);
 
+
+    /*
+     * ============================================================
+     * UI state
+     * ============================================================
+     */
 
     const [
         loading,
@@ -251,12 +306,19 @@ export default function CandidatePage() {
             try {
 
                 const [
+                    profileResponse,
                     resumesResponse,
                     applicationsResponse,
                 ] = await Promise.all([
+                    getMyProfile(),
                     getMyResumes(),
                     getMyApplications(),
                 ]);
+
+
+                setProfile(
+                    profileResponse,
+                );
 
 
                 setResumes(
@@ -298,16 +360,6 @@ export default function CandidatePage() {
     /*
      * ============================================================
      * Переход к чату после notification
-     * ============================================================
-     *
-     * Важно:
-     *
-     * ChatPanel находится ниже списка резюме и откликов.
-     *
-     * Поэтому нельзя сделать один setTimeout
-     * и надеяться, что элемент уже существует.
-     *
-     * Пытаемся найти его несколько раз.
      * ============================================================
      */
 
@@ -402,6 +454,12 @@ export default function CandidatePage() {
     ]);
 
 
+    /*
+     * ============================================================
+     * Resume actions
+     * ============================================================
+     */
+
     async function handleDeleteResume(
         resume: Resume,
     ) {
@@ -480,6 +538,22 @@ export default function CandidatePage() {
                     ...current,
                 ];
             },
+        );
+    }
+
+
+    /*
+     * ============================================================
+     * Profile actions
+     * ============================================================
+     */
+
+    function handleProfileSaved(
+        savedProfile: Profile,
+    ) {
+
+        setProfile(
+            savedProfile,
         );
     }
 
@@ -599,7 +673,7 @@ export default function CandidatePage() {
 
 
                     <p className="mt-2 text-sm text-slate-500">
-                        Управляйте резюме и отслеживайте свои отклики.
+                        Управляйте профилем, резюме и отслеживайте свои отклики.
                     </p>
 
                 </div>
@@ -628,27 +702,79 @@ export default function CandidatePage() {
 
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">
 
+                    {/* ================================================== */}
+                    {/* Sidebar */}
+                    {/* ================================================== */}
+
                     <aside>
 
                         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
                             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-xl font-bold text-white">
 
-                                {user.email
-                                    .charAt(0)
-                                    .toUpperCase()}
+                                {profile?.first_name
+                                    ? profile.first_name
+                                        .charAt(0)
+                                        .toUpperCase()
+                                    : user.email
+                                        .charAt(0)
+                                        .toUpperCase()}
 
                             </div>
 
 
                             <h2 className="mt-4 font-bold text-slate-900">
-                                Кандидат
+
+                                {profile?.first_name
+                                    ? `${profile.first_name}${
+                                        profile.last_name
+                                            ? ` ${profile.last_name}`
+                                            : ""
+                                    }`
+                                    : "Кандидат"}
+
                             </h2>
 
 
                             <p className="mt-1 break-all text-sm text-slate-500">
                                 {user.email}
                             </p>
+
+
+                            {profile?.city && (
+
+                                <p className="mt-2 text-sm text-slate-500">
+                                    📍 {profile.city}
+                                </p>
+
+                            )}
+
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setProfileModalOpen(
+                                        true,
+                                    )
+                                }
+                                className="
+                                    mt-5
+                                    w-full
+                                    rounded-xl
+                                    bg-brand-600
+                                    px-4
+                                    py-2.5
+                                    text-sm
+                                    font-semibold
+                                    text-white
+                                    transition
+                                    hover:bg-brand-700
+                                "
+                            >
+                                {profile?.first_name
+                                    ? "Редактировать профиль"
+                                    : "Заполнить профиль"}
+                            </button>
 
 
                             <div className="mt-5 border-t border-slate-100 pt-5">
@@ -687,9 +813,349 @@ export default function CandidatePage() {
                     </aside>
 
 
+                    {/* ================================================== */}
+                    {/* Main content */}
+                    {/* ================================================== */}
+
                     <div className="space-y-8">
 
+                        {/* ================================================== */}
+                        {/* Profile summary */}
+                        {/* ================================================== */}
+
+                        <section>
+
+                            <div className="mb-4 flex items-center justify-between">
+
+                                <div>
+
+                                    <h2 className="text-xl font-bold text-slate-900">
+                                        Мой профиль
+                                    </h2>
+
+
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Информация о вас, которую сможет использовать работодатель.
+                                    </p>
+
+                                </div>
+
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setProfileModalOpen(
+                                            true,
+                                        )
+                                    }
+                                    className="
+                                        rounded-xl
+                                        border
+                                        border-slate-200
+                                        px-4
+                                        py-2.5
+                                        text-sm
+                                        font-semibold
+                                        text-slate-700
+                                        transition
+                                        hover:bg-slate-50
+                                    "
+                                >
+                                    Редактировать
+                                </button>
+
+                            </div>
+
+
+                            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+
+                                {!profile?.first_name
+                                &&
+                                !profile?.last_name
+                                &&
+                                !profile?.bio
+                                &&
+                                profile?.skills.length === 0 ? (
+
+                                    <div className="py-6 text-center">
+
+                                        <div className="text-4xl">
+                                            👤
+                                        </div>
+
+
+                                        <h3 className="mt-3 font-bold text-slate-800">
+                                            Профиль пока не заполнен
+                                        </h3>
+
+
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            Добавьте информацию о себе, чтобы работодатель мог лучше вас оценить.
+                                        </p>
+
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setProfileModalOpen(
+                                                    true,
+                                                )
+                                            }
+                                            className="
+                                                mt-5
+                                                rounded-xl
+                                                bg-brand-600
+                                                px-5
+                                                py-2.5
+                                                text-sm
+                                                font-semibold
+                                                text-white
+                                                transition
+                                                hover:bg-brand-700
+                                            "
+                                        >
+                                            Заполнить профиль
+                                        </button>
+
+                                    </div>
+
+                                ) : (
+
+                                    <div className="space-y-5">
+
+                                        {(profile?.first_name ||
+                                            profile?.last_name) && (
+
+                                            <div>
+
+                                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                    Имя
+                                                </p>
+
+
+                                                <p className="mt-1 font-semibold text-slate-900">
+
+                                                    {profile.first_name ?? ""}
+
+                                                    {profile.first_name &&
+                                                    profile.last_name
+                                                        ? " "
+                                                        : ""}
+
+                                                    {profile.last_name ?? ""}
+
+                                                </p>
+
+                                            </div>
+
+                                        )}
+
+
+                                        {profile?.bio && (
+
+                                            <div>
+
+                                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                    О себе
+                                                </p>
+
+
+                                                <p className="mt-1 text-sm leading-6 text-slate-600">
+                                                    {profile.bio}
+                                                </p>
+
+                                            </div>
+
+                                        )}
+
+
+                                        {profile?.skills &&
+                                        profile.skills.length > 0 && (
+
+                                            <div>
+
+                                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                    Навыки
+                                                </p>
+
+
+                                                <div className="mt-2 flex flex-wrap gap-2">
+
+                                                    {profile.skills.map(
+                                                        (
+                                                            skill,
+                                                            index,
+                                                        ) => (
+
+                                                            <span
+                                                                key={`${skill}-${index}`}
+                                                                className="
+                                                                    rounded-lg
+                                                                    bg-brand-50
+                                                                    px-3
+                                                                    py-1.5
+                                                                    text-xs
+                                                                    font-semibold
+                                                                    text-brand-600
+                                                                "
+                                                            >
+                                                                {skill}
+                                                            </span>
+
+                                                        ),
+                                                    )}
+
+                                                </div>
+
+                                            </div>
+
+                                        )}
+
+
+                                        <div className="flex flex-wrap gap-3">
+
+                                            {profile?.github_url && (
+
+                                                <a
+                                                    href={
+                                                        profile.github_url
+                                                    }
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="
+                                                        rounded-xl
+                                                        border
+                                                        border-slate-200
+                                                        px-3.5
+                                                        py-2
+                                                        text-xs
+                                                        font-semibold
+                                                        text-slate-700
+                                                        transition
+                                                        hover:bg-slate-50
+                                                    "
+                                                >
+                                                    GitHub
+                                                </a>
+
+                                            )}
+
+
+                                            {profile?.linkedin_url && (
+
+                                                <a
+                                                    href={
+                                                        profile.linkedin_url
+                                                    }
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="
+                                                        rounded-xl
+                                                        border
+                                                        border-slate-200
+                                                        px-3.5
+                                                        py-2
+                                                        text-xs
+                                                        font-semibold
+                                                        text-slate-700
+                                                        transition
+                                                        hover:bg-slate-50
+                                                    "
+                                                >
+                                                    LinkedIn
+                                                </a>
+
+                                            )}
+
+                                        </div>
+
+                                    </div>
+
+                                )}
+
+                            </div>
+
+                        </section>
+
+
+                        {/* ================================================== */}
+                        {/* Invitations */}
+                        {/* ================================================== */}
+
+                        <section>
+
+                            <div className="rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 to-indigo-50 p-6 shadow-sm">
+
+                                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+
+                                    <div className="flex items-start gap-4">
+
+                                        <div
+                                            className="
+                                                flex
+                                                h-12
+                                                w-12
+                                                shrink-0
+                                                items-center
+                                                justify-center
+                                                rounded-xl
+                                                bg-white
+                                                text-xl
+                                                shadow-sm
+                                            "
+                                        >
+                                            🤝
+                                        </div>
+
+                                        <div>
+
+                                            <h2 className="text-lg font-bold text-slate-900">
+                                                Приглашения
+                                            </h2>
+
+                                            <p className="mt-1 text-sm leading-6 text-slate-600">
+                                                Работодатели могут приглашать вас на свои вакансии.
+                                                Просмотрите приглашения и решите, принять их или отклонить.
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            window.location.href =
+                                                "/candidate/invitations"
+                                        }
+                                        className="
+                                            shrink-0
+                                            rounded-xl
+                                            bg-brand-600
+                                            px-5
+                                            py-2.5
+                                            text-sm
+                                            font-semibold
+                                            text-white
+                                            shadow-md
+                                            shadow-brand-500/20
+                                            transition
+                                            hover:bg-brand-700
+                                        "
+                                    >
+                                        Посмотреть приглашения
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </section>
+
+
+                        {/* ================================================== */}
                         {/* Resumes */}
+                        {/* ================================================== */}
 
                         <section>
 
@@ -859,7 +1325,7 @@ export default function CandidatePage() {
                                                     </div>
 
 
-                                                    <div className="flex shrink-0 gap-2">
+                                                    <div className="flex shrink-0 flex-wrap gap-2">
 
                                                         <button
                                                             type="button"
@@ -888,6 +1354,31 @@ export default function CandidatePage() {
                                                             "
                                                         >
                                                             Редактировать
+                                                        </button>
+
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                downloadResumePdf(
+                                                                    resume.id,
+                                                                )
+                                                            }
+                                                            className="
+                                                                rounded-xl
+                                                                border
+                                                                border-brand-200
+                                                                bg-brand-50
+                                                                px-3.5
+                                                                py-2
+                                                                text-xs
+                                                                font-semibold
+                                                                text-brand-600
+                                                                transition
+                                                                hover:bg-brand-100
+                                                            "
+                                                        >
+                                                            Скачать PDF
                                                         </button>
 
 
@@ -930,7 +1421,9 @@ export default function CandidatePage() {
                         </section>
 
 
+                        {/* ================================================== */}
                         {/* Applications */}
+                        {/* ================================================== */}
 
                         <section>
 
@@ -1083,6 +1576,10 @@ export default function CandidatePage() {
             </main>
 
 
+            {/* ================================================== */}
+            {/* Resume modal */}
+            {/* ================================================== */}
+
             <ResumeModal
                 isOpen={
                     resumeModalOpen
@@ -1103,6 +1600,25 @@ export default function CandidatePage() {
                 }}
                 onSaved={
                     handleResumeSaved
+                }
+            />
+
+
+            {/* ================================================== */}
+            {/* Profile modal */}
+            {/* ================================================== */}
+
+            <ProfileModal
+                isOpen={
+                    profileModalOpen
+                }
+                onClose={() =>
+                    setProfileModalOpen(
+                        false,
+                    )
+                }
+                onSaved={
+                    handleProfileSaved
                 }
             />
 

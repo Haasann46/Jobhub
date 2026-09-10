@@ -12,6 +12,8 @@ from backend.app.models.technology import Technology
 from backend.app.models.conversation import Conversation
 from backend.app.models.message import Message
 from backend.app.models.notification import Notification
+from backend.app.models.invitation import Invitation
+from backend.app.models.complaint import Complaint
 
 
 # Регистрируем association table
@@ -33,4 +35,6 @@ __all__ = [
     "Conversation",
     "Message",
     "Notification",
+    "Invitation",
+    "Complaint",
 ]

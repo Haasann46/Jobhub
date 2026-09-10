@@ -4,10 +4,12 @@ export type EmploymentType =
     | "contract"
     | "internship";
 
+
 export type ExperienceLevel =
     | "junior"
     | "middle"
     | "senior";
+
 
 export type VacancySort =
     | "newest"
@@ -15,7 +17,17 @@ export type VacancySort =
     | "salary_asc"
     | "salary_desc";
 
+
+export type VacancyCurrency =
+    | "USD"
+    | "EUR"
+    | "AZN"
+    | "RUB"
+    | "GBP";
+
+
 export interface Technology {
+
     id: number;
 
     name: string;
@@ -23,7 +35,9 @@ export interface Technology {
     slug: string;
 }
 
+
 export interface Vacancy {
+
     id: number;
 
     company_id: number;
@@ -38,6 +52,10 @@ export interface Vacancy {
 
     description: string;
 
+    requirements: string;
+
+    responsibilities: string;
+
     location: string;
 
     employment_type: EmploymentType;
@@ -48,14 +66,20 @@ export interface Vacancy {
 
     salary_to: number | null;
 
+    currency: VacancyCurrency | string;
+
     is_remote: boolean;
+
+    is_active: boolean;
 
     published_at: string;
 
     technologies: Technology[];
 }
 
+
 export interface VacancyListResponse {
+
     items: Vacancy[];
 
     total: number;
@@ -71,7 +95,9 @@ export interface VacancyListResponse {
     has_previous: boolean;
 }
 
+
 export interface VacancySearchParams {
+
     search?: string;
 
     location?: string;

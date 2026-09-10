@@ -13,6 +13,8 @@ from backend.app.routers import conversations
 from backend.app.routers import messages
 from backend.app.routers import notifications
 from backend.app.routers import favorites
+from backend.app.routers import invitations
+from backend.app.routers import complaints
 
 # ── Создаём приложение FastAPI ────────────────────────────────────────────────
 app = FastAPI(
@@ -92,6 +94,17 @@ app.include_router(
 app.include_router(
     favorites.router,
     prefix="/api/favorites",
+)
+
+app.include_router(
+    invitations.router,
+    prefix="/api",
+)
+
+app.include_router(
+    complaints.router,
+    prefix="/api/complaints",
+    tags=["Complaints"],
 )
 
 @app.get("/", tags=["System"])

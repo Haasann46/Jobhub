@@ -1,6 +1,7 @@
 import api from "@/services/api";
 
 import {
+    Technology,
     Vacancy,
     VacancyListResponse,
     VacancySearchParams,
@@ -21,6 +22,10 @@ export interface VacancyCreateData {
 
     description: string;
 
+    requirements: string;
+
+    responsibilities: string;
+
     category: string;
 
     location: string;
@@ -39,6 +44,8 @@ export interface VacancyCreateData {
     salary_from: number | null;
 
     salary_to: number | null;
+
+    currency: string;
 
     is_remote: boolean;
 
@@ -75,40 +82,108 @@ export async function getVacancies(
 
 
     if (params?.search) {
-        query.append("search", params.search);
+
+        query.append(
+            "search",
+            params.search,
+        );
     }
+
 
     if (params?.location) {
-        query.append("location", params.location);
+
+        query.append(
+            "location",
+            params.location,
+        );
     }
+
 
     if (params?.category) {
-        query.append("category", params.category);
+
+        query.append(
+            "category",
+            params.category,
+        );
     }
+
 
     if (params?.employment_type) {
-        query.append("employment_type", params.employment_type);
+
+        query.append(
+            "employment_type",
+            params.employment_type,
+        );
     }
+
 
     if (params?.experience_level) {
-        query.append("experience_level", params.experience_level);
+
+        query.append(
+            "experience_level",
+            params.experience_level,
+        );
     }
 
-    if (params?.salary_from !== undefined) {
-        query.append("salary_from", params.salary_from.toString());
+
+    if (
+        params?.salary_from !==
+        undefined
+    ) {
+
+        query.append(
+            "salary_from",
+            params.salary_from.toString(),
+        );
     }
 
-    if (params?.salary_to !== undefined) {
-        query.append("salary_to", params.salary_to.toString());
+
+    if (
+        params?.salary_to !==
+        undefined
+    ) {
+
+        query.append(
+            "salary_to",
+            params.salary_to.toString(),
+        );
     }
 
-    if (params?.is_remote !== undefined) {
-        query.append("is_remote", String(params.is_remote));
+
+    if (
+        params?.is_remote !==
+        undefined
+    ) {
+
+        query.append(
+            "is_remote",
+            String(
+                params.is_remote,
+            ),
+        );
     }
 
-    query.append("page", String(params?.page ?? 1));
-    query.append("size", String(params?.size ?? 20));
-    query.append("sort", params?.sort ?? "newest");
+
+    query.append(
+        "page",
+        String(
+            params?.page ?? 1,
+        ),
+    );
+
+
+    query.append(
+        "size",
+        String(
+            params?.size ?? 20,
+        ),
+    );
+
+
+    query.append(
+        "sort",
+        params?.sort ?? "newest",
+    );
 
 
     const response =
@@ -121,7 +196,10 @@ export async function getVacancies(
 
 
     if (!response.ok) {
-        throw new Error("Failed to load vacancies");
+
+        throw new Error(
+            "Failed to load vacancies",
+        );
     }
 
 
@@ -150,15 +228,41 @@ export async function getVacancyById(
 
     if (!response.ok) {
 
-        if (response.status === 404) {
-            throw new Error("Vacancy not found");
+        if (
+            response.status === 404
+        ) {
+
+            throw new Error(
+                "Vacancy not found",
+            );
         }
 
-        throw new Error("Failed to load vacancy");
+
+        throw new Error(
+            "Failed to load vacancy",
+        );
     }
 
 
     return response.json();
+}
+
+
+/*
+ * ============================================================
+ * Доступные технологии
+ * ============================================================
+ */
+
+export async function getVacancyTechnologies():
+    Promise<Technology[]> {
+
+    const response =
+        await api.get<Technology[]>(
+            "/vacancies/technologies",
+        );
+
+    return response.data;
 }
 
 
@@ -182,6 +286,25 @@ export async function getMyVacancies():
 
 /*
  * ============================================================
+ * Публичные вакансии компании
+ * ============================================================
+ */
+
+export async function getCompanyVacancies(
+    companyId: number,
+): Promise<Vacancy[]> {
+
+    const response =
+        await api.get<Vacancy[]>(
+            `/companies/${companyId}/vacancies`,
+        );
+
+    return response.data;
+}
+
+
+/*
+ * ============================================================
  * Обновление вакансии
  * ============================================================
  */
@@ -191,6 +314,10 @@ export interface VacancyUpdateData {
     title?: string;
 
     description?: string;
+
+    requirements?: string;
+
+    responsibilities?: string;
 
     category?: string;
 
@@ -207,11 +334,17 @@ export interface VacancyUpdateData {
         | "middle"
         | "senior";
 
-    salary_from?: number | null;
+    salary_from?:
+        number | null;
 
-    salary_to?: number | null;
+    salary_to?:
+        number | null;
+
+    currency?: string;
 
     is_remote?: boolean;
+
+    is_active?: boolean;
 
     technology_ids?: number[];
 }

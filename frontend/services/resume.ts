@@ -12,9 +12,7 @@ function getAccessToken(): string | null {
         return null;
     }
 
-    return localStorage.getItem(
-        "access_token",
-    );
+    return localStorage.getItem("access_token");
 }
 
 
@@ -24,8 +22,7 @@ function getAuthConfig() {
     return {
         headers: token
             ? {
-                Authorization:
-                    `Bearer ${token}`,
+                Authorization: `Bearer ${token}`,
             }
             : undefined,
     };
@@ -33,7 +30,6 @@ function getAuthConfig() {
 
 
 export async function getMyResumes(): Promise<Resume[]> {
-
     const response = await api.get<Resume[]>(
         "/resumes/my",
         getAuthConfig(),
@@ -46,13 +42,11 @@ export async function getMyResumes(): Promise<Resume[]> {
 export async function createResume(
     data: ResumeCreate,
 ): Promise<Resume> {
-
-    const response =
-        await api.post<Resume>(
-            "/resumes",
-            data,
-            getAuthConfig(),
-        );
+    const response = await api.post<Resume>(
+        "/resumes",
+        data,
+        getAuthConfig(),
+    );
 
     return response.data;
 }
@@ -62,13 +56,11 @@ export async function updateResume(
     resumeId: number,
     data: ResumeUpdate,
 ): Promise<Resume> {
-
-    const response =
-        await api.patch<Resume>(
-            `/resumes/${resumeId}`,
-            data,
-            getAuthConfig(),
-        );
+    const response = await api.patch<Resume>(
+        `/resumes/${resumeId}`,
+        data,
+        getAuthConfig(),
+    );
 
     return response.data;
 }
@@ -77,9 +69,40 @@ export async function updateResume(
 export async function deleteResume(
     resumeId: number,
 ): Promise<void> {
-
     await api.delete(
         `/resumes/${resumeId}`,
         getAuthConfig(),
     );
+}
+
+
+export async function downloadResumePdf(
+    resumeId: number,
+): Promise<void> {
+    const response = await api.get<Blob>(
+        `/resumes/${resumeId}/pdf`,
+        {
+            ...getAuthConfig(),
+            responseType: "blob",
+        },
+    );
+
+    const blob = new Blob(
+        [response.data],
+        {
+            type: "application/pdf",
+        },
+    );
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `resume-${resumeId}.pdf`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.URL.revokeObjectURL(url);
 }

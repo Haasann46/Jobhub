@@ -10,6 +10,7 @@ from backend.app.dependencies.search import get_search_params
 from backend.app.dependencies.vacancy import get_vacancy_service
 from backend.app.models.user import User
 from backend.app.schemas.vacancy import (
+    TechnologyResponse,
     VacancyCreate,
     VacancyListResponse,
     VacancyResponse,
@@ -18,8 +19,13 @@ from backend.app.schemas.vacancy import (
 )
 from backend.app.services.vacancy import VacancyService
 
+
 router = APIRouter()
 
+
+# ============================================================
+# Public vacancy list
+# ============================================================
 
 @router.get(
     "",
@@ -37,6 +43,10 @@ async def get_vacancies(
         **params.model_dump(),
     )
 
+
+# ============================================================
+# Create vacancy
+# ============================================================
 
 @router.post(
     "",
@@ -58,6 +68,10 @@ async def create_vacancy(
     )
 
 
+# ============================================================
+# My vacancies
+# ============================================================
+
 @router.get(
     "/my",
     response_model=list[VacancyResponse],
@@ -75,6 +89,29 @@ async def get_my_vacancies(
     )
 
 
+# ============================================================
+# Available technologies
+#
+# IMPORTANT:
+# This route must be before /{vacancy_id}
+# ============================================================
+
+@router.get(
+    "/technologies",
+    response_model=list[TechnologyResponse],
+)
+async def get_vacancy_technologies(
+    service: VacancyService = Depends(
+        get_vacancy_service,
+    ),
+):
+    return await service.get_technologies()
+
+
+# ============================================================
+# Get vacancy by ID
+# ============================================================
+
 @router.get(
     "/{vacancy_id}",
     response_model=VacancyResponse,
@@ -85,18 +122,26 @@ async def get_vacancy(
         get_vacancy_service,
     ),
 ):
+
     vacancy = await service.get_by_id(
         vacancy_id,
     )
 
+
     if vacancy is None:
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vacancy not found.",
         )
 
+
     return vacancy
 
+
+# ============================================================
+# Update vacancy
+# ============================================================
 
 @router.put(
     "/{vacancy_id}",
@@ -118,6 +163,10 @@ async def update_vacancy(
         data,
     )
 
+
+# ============================================================
+# Delete vacancy
+# ============================================================
 
 @router.delete(
     "/{vacancy_id}",

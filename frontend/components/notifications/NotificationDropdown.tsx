@@ -1,6 +1,7 @@
 "use client";
 
 import {
+    useCallback,
     useEffect,
     useRef,
     useState,
@@ -26,6 +27,12 @@ import {
     NotificationType,
 } from "@/types/notification";
 
+
+/*
+ * ============================================================
+ * Иконка уведомления
+ * ============================================================
+ */
 
 function getNotificationIcon(
     type: NotificationType,
@@ -54,20 +61,30 @@ function getNotificationIcon(
 }
 
 
+/*
+ * ============================================================
+ * Относительное время
+ * ============================================================
+ */
+
 function formatNotificationTime(
     dateString: string,
 ): string {
 
     const date =
-        new Date(dateString);
+        new Date(
+            dateString,
+        );
 
     if (
         Number.isNaN(
             date.getTime(),
         )
     ) {
+
         return "";
     }
+
 
     const now =
         new Date();
@@ -76,6 +93,21 @@ function formatNotificationTime(
         now.getTime()
         -
         date.getTime();
+
+
+    /*
+     * Если дата из будущего
+     * или разница отрицательная —
+     * показываем "только что".
+     */
+
+    if (
+        diff <= 0
+    ) {
+
+        return "только что";
+    }
+
 
     const minute =
         60 * 1000;
@@ -87,12 +119,17 @@ function formatNotificationTime(
         24 * hour;
 
 
-    if (diff < minute) {
+    if (
+        diff < minute
+    ) {
+
         return "только что";
     }
 
 
-    if (diff < hour) {
+    if (
+        diff < hour
+    ) {
 
         const minutes =
             Math.floor(
@@ -103,7 +140,9 @@ function formatNotificationTime(
     }
 
 
-    if (diff < day) {
+    if (
+        diff < day
+    ) {
 
         const hours =
             Math.floor(
@@ -114,7 +153,9 @@ function formatNotificationTime(
     }
 
 
-    if (diff < 7 * day) {
+    if (
+        diff < 7 * day
+    ) {
 
         const days =
             Math.floor(
@@ -136,18 +177,27 @@ function formatNotificationTime(
 }
 
 
+/*
+ * ============================================================
+ * Точное время
+ * ============================================================
+ */
+
 function formatExactTime(
     dateString: string,
 ): string {
 
     const date =
-        new Date(dateString);
+        new Date(
+            dateString,
+        );
 
     if (
         Number.isNaN(
             date.getTime(),
         )
     ) {
+
         return "";
     }
 
@@ -162,6 +212,12 @@ function formatExactTime(
 }
 
 
+/*
+ * ============================================================
+ * Preview сообщения
+ * ============================================================
+ */
+
 function getMessagePreview(
     notification: Notification,
 ): string {
@@ -170,9 +226,20 @@ function getMessagePreview(
         notification.type !==
         "new_message"
     ) {
+
         return notification.message;
     }
 
+
+    /*
+     * Backend может вернуть:
+     *
+     * "Hasan: Привет"
+     *
+     * В интерфейсе оставляем только:
+     *
+     * "Привет"
+     */
 
     if (
         notification.sender_name
@@ -194,6 +261,12 @@ function getMessagePreview(
 }
 
 
+/*
+ * ============================================================
+ * Ограничение длины сообщения
+ * ============================================================
+ */
+
 function truncateMessage(
     message: string,
     maxLength = 120,
@@ -203,19 +276,28 @@ function truncateMessage(
         message.length <=
         maxLength
     ) {
+
         return message;
     }
 
 
     return (
-        message.slice(
-            0,
-            maxLength,
-        ).trimEnd()
+        message
+            .slice(
+                0,
+                maxLength,
+            )
+            .trimEnd()
         + "..."
     );
 }
 
+
+/*
+ * ============================================================
+ * Notification Dropdown
+ * ============================================================
+ */
 
 export default function NotificationDropdown() {
 
@@ -223,11 +305,38 @@ export default function NotificationDropdown() {
         useRouter();
 
 
+    /*
+     * ========================================================
+     * Текущий пользователь
+     * ========================================================
+     */
+
     const user =
         useAuthStore(
             (state) => state.user,
         );
 
+
+    /*
+     * ========================================================
+     * Mounted
+     *
+     * Нужен для защиты client-only логики
+     * от SSR hydration mismatch.
+     * ========================================================
+     */
+
+    const [
+        mounted,
+        setMounted,
+    ] = useState(false);
+
+
+    /*
+     * ========================================================
+     * State
+     * ========================================================
+     */
 
     const [
         isOpen,
@@ -261,86 +370,236 @@ export default function NotificationDropdown() {
     ] = useState(false);
 
 
+    /*
+     * ========================================================
+     * Ref
+     * ========================================================
+     */
+
     const dropdownRef =
         useRef<HTMLDivElement>(null);
 
 
     /*
      * ============================================================
-     * Получить количество непрочитанных
+     * Component mounted
      * ============================================================
      */
 
-    async function loadUnreadCount() {
+    useEffect(() => {
 
-        try {
+        setMounted(true);
 
-            const count =
-                await getUnreadNotificationCount();
+    }, []);
 
-            setUnreadCount(
-                count,
-            );
 
-        } catch (error) {
+    /*
+     * ============================================================
+     * Безопасное количество unread
+     * ============================================================
+     */
 
-            console.error(
-                "Failed to load unread notification count:",
-                error,
-            );
+    function normalizeUnreadCount(
+        value: unknown,
+    ): number {
 
+        if (
+            typeof value !==
+            "number"
+        ) {
+
+            return 0;
         }
+
+
+        if (
+            !Number.isFinite(
+                value,
+            )
+        ) {
+
+            return 0;
+        }
+
+
+        if (
+            value < 0
+        ) {
+
+            return 0;
+        }
+
+
+        return Math.floor(
+            value,
+        );
     }
 
 
     /*
      * ============================================================
-     * Получить уведомления
+     * Получить количество непрочитанных
+     *
+     * Backend:
+     *
+     * GET /api/notifications/unread/count
+     *
+     * {
+     *     "total": 3
+     * }
      * ============================================================
      */
 
-    async function loadNotifications() {
+    const loadUnreadCount =
+        useCallback(
+            async () => {
 
-        try {
+                /*
+                 * Не отправляем запрос,
+                 * пока пользователь не авторизован.
+                 */
 
-            setIsLoading(
-                true,
-            );
+                if (
+                    !user
+                ) {
 
+                    setUnreadCount(
+                        0,
+                    );
 
-            const [
-                notificationData,
-                unreadData,
-            ] = await Promise.all([
-                getMyNotifications(),
-                getUnreadNotificationCount(),
-            ]);
-
-
-            setNotifications(
-                notificationData,
-            );
+                    return;
+                }
 
 
-            setUnreadCount(
-                unreadData,
-            );
+                try {
 
-        } catch (error) {
+                    const count =
+                        await getUnreadNotificationCount();
 
-            console.error(
-                "Failed to load notifications:",
-                error,
-            );
 
-        } finally {
+                    const safeCount =
+                        normalizeUnreadCount(
+                            count,
+                        );
 
-            setIsLoading(
-                false,
-            );
 
-        }
-    }
+                    setUnreadCount(
+                        safeCount,
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "Failed to load unread notification count:",
+                        error,
+                    );
+
+                }
+
+            },
+            [
+                user,
+            ],
+        );
+
+
+    /*
+     * ============================================================
+     * Получить полный список уведомлений
+     * ============================================================
+     */
+
+    const loadNotifications =
+        useCallback(
+            async () => {
+
+                if (
+                    !user
+                ) {
+
+                    setNotifications(
+                        [],
+                    );
+
+                    setUnreadCount(
+                        0,
+                    );
+
+                    return;
+                }
+
+
+                try {
+
+                    setIsLoading(
+                        true,
+                    );
+
+
+                    /*
+                     * Запрашиваем одновременно:
+                     *
+                     * 1. список уведомлений
+                     * 2. количество unread
+                     */
+
+                    const [
+                        notificationData,
+                        unreadData,
+                    ] = await Promise.all([
+                        getMyNotifications(),
+                        getUnreadNotificationCount(),
+                    ]);
+
+
+                    /*
+                     * Защита от некорректного
+                     * ответа backend.
+                     */
+
+                    const safeNotifications =
+                        Array.isArray(
+                            notificationData,
+                        )
+                            ? notificationData
+                            : [];
+
+
+                    const safeUnreadCount =
+                        normalizeUnreadCount(
+                            unreadData,
+                        );
+
+
+                    setNotifications(
+                        safeNotifications,
+                    );
+
+
+                    setUnreadCount(
+                        safeUnreadCount,
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "Failed to load notifications:",
+                        error,
+                    );
+
+                } finally {
+
+                    setIsLoading(
+                        false,
+                    );
+
+                }
+
+            },
+            [
+                user,
+            ],
+        );
 
 
     /*
@@ -351,27 +610,76 @@ export default function NotificationDropdown() {
 
     useEffect(() => {
 
+        if (
+            !mounted
+        ) {
+
+            return;
+        }
+
+
+        if (
+            !user
+        ) {
+
+            setUnreadCount(
+                0,
+            );
+
+            return;
+        }
+
+
         loadUnreadCount();
 
-    }, []);
+    }, [
+        mounted,
+        user,
+        loadUnreadCount,
+    ]);
 
 
     /*
      * ============================================================
-     * Автоматическое обновление badge
+     * Автоматическое обновление
+     *
+     * Каждые 5 секунд проверяем:
+     *
+     * - unread count всегда
+     * - список уведомлений, если dropdown открыт
      * ============================================================
      */
 
     useEffect(() => {
 
+        if (
+            !mounted
+            ||
+            !user
+        ) {
+
+            return;
+        }
+
+
         const interval =
             window.setInterval(
                 () => {
 
-                    loadUnreadCount();
+                    if (
+                        isOpen
+                    ) {
+
+                        loadNotifications();
+
+                    } else {
+
+                        loadUnreadCount();
+
+                    }
 
                 },
-                10000,
+                5000,
             );
 
 
@@ -383,18 +691,31 @@ export default function NotificationDropdown() {
 
         };
 
-    }, []);
+    }, [
+        mounted,
+        user,
+        isOpen,
+        loadUnreadCount,
+        loadNotifications,
+    ]);
 
 
     /*
      * ============================================================
-     * Загрузка уведомлений при открытии
+     * Обновляем список при открытии dropdown
      * ============================================================
      */
 
     useEffect(() => {
 
-        if (!isOpen) {
+        if (
+            !mounted
+            ||
+            !isOpen
+            ||
+            !user
+        ) {
+
             return;
         }
 
@@ -402,7 +723,10 @@ export default function NotificationDropdown() {
         loadNotifications();
 
     }, [
+        mounted,
         isOpen,
+        user,
+        loadNotifications,
     ]);
 
 
@@ -414,15 +738,27 @@ export default function NotificationDropdown() {
 
     useEffect(() => {
 
+        if (
+            !mounted
+        ) {
+
+            return;
+        }
+
+
         function handleClickOutside(
             event: MouseEvent,
         ) {
+
+            const target =
+                event.target as Node;
+
 
             if (
                 dropdownRef.current
                 &&
                 !dropdownRef.current.contains(
-                    event.target as Node,
+                    target,
                 )
             ) {
 
@@ -431,6 +767,7 @@ export default function NotificationDropdown() {
                 );
 
             }
+
         }
 
 
@@ -449,7 +786,9 @@ export default function NotificationDropdown() {
 
         };
 
-    }, []);
+    }, [
+        mounted,
+    ]);
 
 
     /*
@@ -463,7 +802,9 @@ export default function NotificationDropdown() {
     ) {
 
         /*
-         * Помечаем уведомление прочитанным.
+         * --------------------------------------------------------
+         * Помечаем уведомление прочитанным
+         * --------------------------------------------------------
          */
 
         if (
@@ -477,10 +818,16 @@ export default function NotificationDropdown() {
                 );
 
 
+                /*
+                 * Обновляем notification локально.
+                 */
+
                 setNotifications(
                     (current) =>
                         current.map(
-                            (item) =>
+                            (
+                                item,
+                            ) =>
                                 item.id ===
                                 notification.id
                                     ? {
@@ -491,6 +838,10 @@ export default function NotificationDropdown() {
                         ),
                 );
 
+
+                /*
+                 * Уменьшаем badge.
+                 */
 
                 setUnreadCount(
                     (current) =>
@@ -508,11 +859,14 @@ export default function NotificationDropdown() {
                 );
 
             }
+
         }
 
 
         /*
+         * --------------------------------------------------------
          * Закрываем dropdown.
+         * --------------------------------------------------------
          */
 
         setIsOpen(
@@ -522,13 +876,59 @@ export default function NotificationDropdown() {
 
         /*
          * ========================================================
+         * Приглашение
+         *
+         * Кандидат должен попасть не просто на вакансию,
+         * а на страницу приглашений, где доступны:
+         *
+         * - Принять
+         * - Отклонить
+         * ========================================================
+         */
+
+        if (
+            notification.type ===
+            "invitation"
+        ) {
+
+            if (
+                user?.role ===
+                "candidate"
+            ) {
+
+                router.push(
+                    "/candidate/invitations",
+                );
+
+                return;
+            }
+
+
+            /*
+             * Если уведомление приглашения
+             * каким-либо образом открывается
+             * у работодателя, оставляем переход
+             * на связанную вакансию.
+             */
+
+            if (
+                notification.vacancy_id
+            ) {
+
+                router.push(
+                    `/vacancies/${notification.vacancy_id}`,
+                );
+
+            }
+
+            return;
+        }
+
+
+        /*
+         * ========================================================
          * Новое сообщение
          * ========================================================
-         *
-         * Передаём conversation_id.
-         *
-         * Страница кабинета сама откроет
-         * существующий ChatPanel.
          */
 
         if (
@@ -613,6 +1013,7 @@ export default function NotificationDropdown() {
                 `/vacancies/${notification.vacancy_id}`,
             );
         }
+
     }
 
 
@@ -629,6 +1030,7 @@ export default function NotificationDropdown() {
             ||
             isMarkingAll
         ) {
+
             return;
         }
 
@@ -643,6 +1045,10 @@ export default function NotificationDropdown() {
             await markAllNotificationsAsRead();
 
 
+            /*
+             * Обновляем локальный список.
+             */
+
             setNotifications(
                 (current) =>
                     current.map(
@@ -655,6 +1061,10 @@ export default function NotificationDropdown() {
                     ),
             );
 
+
+            /*
+             * Badge обнуляем сразу.
+             */
 
             setUnreadCount(
                 0,
@@ -674,15 +1084,57 @@ export default function NotificationDropdown() {
             );
 
         }
+
     }
 
+
+    /*
+     * ============================================================
+     * До hydration ничего не рендерим.
+     * ============================================================
+     */
+
+    if (
+        !mounted
+    ) {
+
+        return null;
+    }
+
+
+    /*
+     * ============================================================
+     * Если пользователь не авторизован —
+     * уведомления не показываем.
+     * ============================================================
+     */
+
+    if (
+        !user
+    ) {
+
+        return null;
+    }
+
+
+    /*
+     * ============================================================
+     * Render
+     * ============================================================
+     */
 
     return (
 
         <div
             ref={dropdownRef}
-            className="relative"
+            className="
+                relative
+            "
         >
+
+            {/* ================================================= */}
+            {/* Bell */}
+            {/* ================================================= */}
 
             <button
                 type="button"
@@ -711,6 +1163,10 @@ export default function NotificationDropdown() {
                 🔔
 
 
+                {/* ================================================= */}
+                {/* Unread badge */}
+                {/* ================================================= */}
+
                 {unreadCount > 0 && (
 
                     <span
@@ -733,15 +1189,21 @@ export default function NotificationDropdown() {
                             ring-white
                         "
                     >
+
                         {unreadCount > 99
                             ? "99+"
                             : unreadCount}
+
                     </span>
 
                 )}
 
             </button>
 
+
+            {/* ================================================= */}
+            {/* Dropdown */}
+            {/* ================================================= */}
 
             {isOpen && (
 
@@ -751,7 +1213,8 @@ export default function NotificationDropdown() {
                         right-0
                         top-12
                         z-50
-                        w-[410px]
+                        w-[360px]
+                        max-w-[calc(100vw-2rem)]
                         overflow-hidden
                         rounded-2xl
                         border
@@ -761,6 +1224,10 @@ export default function NotificationDropdown() {
                         shadow-slate-900/10
                     "
                 >
+
+                    {/* ================================================= */}
+                    {/* Header */}
+                    {/* ================================================= */}
 
                     <div
                         className="
@@ -778,7 +1245,7 @@ export default function NotificationDropdown() {
 
                             <h3
                                 className="
-                                    text-base
+                                    text-sm
                                     font-bold
                                     text-slate-900
                                 "
@@ -793,7 +1260,7 @@ export default function NotificationDropdown() {
                                     className="
                                         mt-0.5
                                         text-xs
-                                        text-slate-500
+                                        text-slate-400
                                     "
                                 >
                                     Непрочитанных:{" "}
@@ -816,22 +1283,31 @@ export default function NotificationDropdown() {
                                 isMarkingAll
                             }
                             className="
+                                rounded-lg
+                                px-2.5
+                                py-1.5
                                 text-xs
                                 font-semibold
                                 text-brand-600
                                 transition
-                                hover:text-brand-700
+                                hover:bg-brand-50
                                 disabled:cursor-not-allowed
                                 disabled:opacity-40
                             "
                         >
+
                             {isMarkingAll
                                 ? "Обновление..."
                                 : "Прочитать все"}
+
                         </button>
 
                     </div>
 
+
+                    {/* ================================================= */}
+                    {/* Notification list */}
+                    {/* ================================================= */}
 
                     <div
                         className="
@@ -863,6 +1339,7 @@ export default function NotificationDropdown() {
                                     "
                                 />
 
+
                                 <p
                                     className="
                                         mt-3
@@ -885,9 +1362,14 @@ export default function NotificationDropdown() {
                                 "
                             >
 
-                                <div className="text-3xl">
+                                <div
+                                    className="
+                                        text-3xl
+                                    "
+                                >
                                     🔔
                                 </div>
+
 
                                 <p
                                     className="
@@ -900,15 +1382,17 @@ export default function NotificationDropdown() {
                                     Уведомлений пока нет
                                 </p>
 
+
                                 <p
                                     className="
                                         mt-1
                                         text-xs
+                                        leading-5
                                         text-slate-400
                                     "
                                 >
-                                    Здесь появятся важные события
-                                    вашего аккаунта.
+                                    Здесь появятся важные
+                                    события вашего аккаунта.
                                 </p>
 
                             </div>
@@ -948,6 +1432,7 @@ export default function NotificationDropdown() {
                                             className={`
                                                 flex
                                                 w-full
+                                                items-start
                                                 gap-3
                                                 border-b
                                                 border-slate-100
@@ -955,17 +1440,21 @@ export default function NotificationDropdown() {
                                                 py-4
                                                 text-left
                                                 transition
-                                                hover:bg-slate-50
+                                                last:border-b-0
                                                 ${
-                                                    !notification.is_read
-                                                        ? "bg-brand-50/40"
-                                                        : "bg-white"
+                                                    notification.is_read
+                                                        ? "bg-white hover:bg-slate-50"
+                                                        : "bg-brand-50/60 hover:bg-brand-50"
                                                 }
                                             `}
                                         >
 
+                                            {/* ================================================= */}
+                                            {/* Icon */}
+                                            {/* ================================================= */}
+
                                             <div
-                                                className="
+                                                className={`
                                                     flex
                                                     h-10
                                                     w-10
@@ -973,15 +1462,25 @@ export default function NotificationDropdown() {
                                                     items-center
                                                     justify-center
                                                     rounded-xl
-                                                    bg-slate-100
                                                     text-lg
-                                                "
+                                                    ${
+                                                        notification.is_read
+                                                            ? "bg-slate-100"
+                                                            : "bg-white shadow-sm"
+                                                    }
+                                                `}
                                             >
-                                                {getNotificationIcon(
-                                                    notification.type,
-                                                )}
+                                                {
+                                                    getNotificationIcon(
+                                                        notification.type,
+                                                    )
+                                                }
                                             </div>
 
+
+                                            {/* ================================================= */}
+                                            {/* Content */}
+                                            {/* ================================================= */}
 
                                             <div
                                                 className="
@@ -990,12 +1489,14 @@ export default function NotificationDropdown() {
                                                 "
                                             >
 
+                                                {/* Title */}
+
                                                 <div
                                                     className="
                                                         flex
                                                         items-start
                                                         justify-between
-                                                        gap-2
+                                                        gap-3
                                                     "
                                                 >
 
@@ -1003,9 +1504,9 @@ export default function NotificationDropdown() {
                                                         className={`
                                                             text-sm
                                                             ${
-                                                                !notification.is_read
-                                                                    ? "font-bold text-slate-900"
-                                                                    : "font-semibold text-slate-700"
+                                                                notification.is_read
+                                                                    ? "font-medium text-slate-700"
+                                                                    : "font-bold text-slate-900"
                                                             }
                                                         `}
                                                     >
@@ -1033,8 +1534,9 @@ export default function NotificationDropdown() {
                                                 </div>
 
 
-                                                {isMessage &&
-                                                    notification.sender_name && (
+                                                {/* Sender */}
+
+                                                {notification.sender_name && (
 
                                                     <p
                                                         className="
@@ -1053,6 +1555,8 @@ export default function NotificationDropdown() {
                                                 )}
 
 
+                                                {/* Message */}
+
                                                 <p
                                                     className="
                                                         mt-2
@@ -1061,11 +1565,15 @@ export default function NotificationDropdown() {
                                                         text-slate-500
                                                     "
                                                 >
+
                                                     {isMessage
                                                         ? `"${messagePreview}"`
                                                         : messagePreview}
+
                                                 </p>
 
+
+                                                {/* Conversation hint */}
 
                                                 {isMessage
                                                     &&
@@ -1083,34 +1591,32 @@ export default function NotificationDropdown() {
                                                             text-brand-600
                                                         "
                                                     >
+
                                                         💬
+
                                                         <span>
                                                             Открыть чат
                                                         </span>
-                                                        <span>
-                                                            →
-                                                        </span>
+
                                                     </div>
 
                                                 )}
 
+
+                                                {/* Time */}
 
                                                 <div
                                                     className="
                                                         mt-2
                                                         flex
                                                         items-center
-                                                        justify-between
                                                         gap-2
+                                                        text-[11px]
+                                                        text-slate-400
                                                     "
                                                 >
 
-                                                    <span
-                                                        className="
-                                                            text-[11px]
-                                                            text-slate-400
-                                                        "
-                                                    >
+                                                    <span>
                                                         {
                                                             formatNotificationTime(
                                                                 notification.created_at,
@@ -1119,13 +1625,12 @@ export default function NotificationDropdown() {
                                                     </span>
 
 
-                                                    <span
-                                                        className="
-                                                            text-[11px]
-                                                            font-medium
-                                                            text-slate-400
-                                                        "
-                                                    >
+                                                    <span>
+                                                        •
+                                                    </span>
+
+
+                                                    <span>
                                                         {
                                                             formatExactTime(
                                                                 notification.created_at,
@@ -1146,40 +1651,6 @@ export default function NotificationDropdown() {
                         )}
 
                     </div>
-
-
-                    {notifications.length > 0 && (
-
-                        <div
-                            className="
-                                border-t
-                                border-slate-100
-                                p-3
-                            "
-                        >
-
-                            <button
-                                type="button"
-                                onClick={
-                                    loadNotifications
-                                }
-                                className="
-                                    w-full
-                                    rounded-xl
-                                    py-2.5
-                                    text-sm
-                                    font-semibold
-                                    text-brand-600
-                                    transition
-                                    hover:bg-brand-50
-                                "
-                            >
-                                Обновить
-                            </button>
-
-                        </div>
-
-                    )}
 
                 </div>
 

@@ -67,6 +67,30 @@ export default function CompanyForm({
 
 
     const [
+        industry,
+        setIndustry,
+    ] = useState(
+        company?.industry ?? "",
+    );
+
+
+    const [
+        size,
+        setSize,
+    ] = useState(
+        company?.size ?? "",
+    );
+
+
+    const [
+        address,
+        setAddress,
+    ] = useState(
+        company?.address ?? "",
+    );
+
+
+    const [
         loading,
         setLoading,
     ] = useState(false);
@@ -98,6 +122,18 @@ export default function CompanyForm({
             company?.logo_url ?? "",
         );
 
+        setIndustry(
+            company?.industry ?? "",
+        );
+
+        setSize(
+            company?.size ?? "",
+        );
+
+        setAddress(
+            company?.address ?? "",
+        );
+
         setError(null);
 
     }, [
@@ -112,6 +148,12 @@ export default function CompanyForm({
         event.preventDefault();
 
 
+        /*
+         * ============================================================
+         * Обязательные поля
+         * ============================================================
+         */
+
         if (!name.trim()) {
 
             setError(
@@ -122,7 +164,24 @@ export default function CompanyForm({
         }
 
 
+        if (!description.trim()) {
+
+            setError(
+                "Введите описание компании.",
+            );
+
+            return;
+        }
+
+
+        /*
+         * ============================================================
+         * Сохраняем
+         * ============================================================
+         */
+
         setLoading(true);
+
         setError(null);
 
 
@@ -133,8 +192,7 @@ export default function CompanyForm({
                 name: name.trim(),
 
                 description:
-                    description.trim() ||
-                    null,
+                    description.trim(),
 
                 website:
                     website.trim() ||
@@ -142,6 +200,18 @@ export default function CompanyForm({
 
                 logo_url:
                     logoUrl.trim() ||
+                    null,
+
+                industry:
+                    industry.trim() ||
+                    null,
+
+                size:
+                    size.trim() ||
+                    null,
+
+                address:
+                    address.trim() ||
                     null,
 
             };
@@ -173,10 +243,30 @@ export default function CompanyForm({
 
         } catch (error: any) {
 
-            setError(
-                error?.response?.data?.detail ??
-                "Не удалось сохранить компанию.",
-            );
+            const detail =
+                error?.response?.data?.detail;
+
+
+            if (Array.isArray(detail)) {
+
+                setError(
+                    detail
+                        .map(
+                            (item) =>
+                                item?.msg ??
+                                "Некорректное значение.",
+                        )
+                        .join(" "),
+                );
+
+            } else {
+
+                setError(
+                    detail ??
+                    "Не удалось сохранить компанию.",
+                );
+
+            }
 
         } finally {
 
@@ -200,12 +290,18 @@ export default function CompanyForm({
             "
         >
 
+            {/* ====================================================== */}
+            {/* Header */}
+            {/* ====================================================== */}
+
             <div className="mb-6">
 
                 <p className="text-sm font-medium text-brand-600">
+
                     {company
                         ? "Настройки компании"
                         : "Новая компания"}
+
                 </p>
 
 
@@ -222,16 +318,32 @@ export default function CompanyForm({
 
                     {company
                         ? "Обновите информацию о вашей компании."
-                        : "Заполните основную информацию о компании."}
+                        : "Заполните информацию о компании."}
 
                 </p>
 
             </div>
 
 
+            {/* ====================================================== */}
+            {/* Error */}
+            {/* ====================================================== */}
+
             {error && (
 
-                <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                <div
+                    className="
+                        mb-5
+                        rounded-xl
+                        border
+                        border-red-200
+                        bg-red-50
+                        px-4
+                        py-3
+                        text-sm
+                        text-red-600
+                    "
+                >
 
                     {error}
 
@@ -242,15 +354,26 @@ export default function CompanyForm({
 
             <div className="space-y-5">
 
+                {/* ================================================== */}
                 {/* Name */}
+                {/* ================================================== */}
 
                 <div>
 
                     <label
                         htmlFor="company-name"
-                        className="mb-2 block text-sm font-semibold text-slate-700"
+                        className="
+                            mb-2
+                            block
+                            text-sm
+                            font-semibold
+                            text-slate-700
+                        "
                     >
                         Название компании
+                        <span className="ml-1 text-red-500">
+                            *
+                        </span>
                     </label>
 
 
@@ -288,15 +411,26 @@ export default function CompanyForm({
                 </div>
 
 
+                {/* ================================================== */}
                 {/* Description */}
+                {/* ================================================== */}
 
                 <div>
 
                     <label
                         htmlFor="company-description"
-                        className="mb-2 block text-sm font-semibold text-slate-700"
+                        className="
+                            mb-2
+                            block
+                            text-sm
+                            font-semibold
+                            text-slate-700
+                        "
                     >
                         Описание
+                        <span className="ml-1 text-red-500">
+                            *
+                        </span>
                     </label>
 
 
@@ -310,6 +444,7 @@ export default function CompanyForm({
                         }
                         placeholder="Расскажите о компании..."
                         rows={5}
+                        required
                         className="
                             w-full
                             resize-none
@@ -334,15 +469,26 @@ export default function CompanyForm({
                 </div>
 
 
+                {/* ================================================== */}
                 {/* Website */}
+                {/* ================================================== */}
 
                 <div>
 
                     <label
                         htmlFor="company-website"
-                        className="mb-2 block text-sm font-semibold text-slate-700"
+                        className="
+                            mb-2
+                            block
+                            text-sm
+                            font-semibold
+                            text-slate-700
+                        "
                     >
                         Сайт
+                        <span className="ml-2 text-xs font-normal text-slate-400">
+                            необязательно
+                        </span>
                     </label>
 
 
@@ -378,15 +524,26 @@ export default function CompanyForm({
                 </div>
 
 
+                {/* ================================================== */}
                 {/* Logo */}
+                {/* ================================================== */}
 
                 <div>
 
                     <label
                         htmlFor="company-logo"
-                        className="mb-2 block text-sm font-semibold text-slate-700"
+                        className="
+                            mb-2
+                            block
+                            text-sm
+                            font-semibold
+                            text-slate-700
+                        "
                     >
                         URL логотипа
+                        <span className="ml-2 text-xs font-normal text-slate-400">
+                            необязательно
+                        </span>
                     </label>
 
 
@@ -421,12 +578,191 @@ export default function CompanyForm({
 
                 </div>
 
+
+                {/* ================================================== */}
+                {/* Industry */}
+                {/* ================================================== */}
+
+                <div>
+
+                    <label
+                        htmlFor="company-industry"
+                        className="
+                            mb-2
+                            block
+                            text-sm
+                            font-semibold
+                            text-slate-700
+                        "
+                    >
+                        Индустрия
+                        <span className="ml-2 text-xs font-normal text-slate-400">
+                            необязательно
+                        </span>
+                    </label>
+
+
+                    <input
+                        id="company-industry"
+                        type="text"
+                        value={industry}
+                        onChange={(event) =>
+                            setIndustry(
+                                event.target.value,
+                            )
+                        }
+                        placeholder="Например, Information Technology"
+                        maxLength={255}
+                        className="
+                            w-full
+                            rounded-xl
+                            border
+                            border-slate-200
+                            bg-white
+                            px-4
+                            py-3
+                            text-sm
+                            text-slate-900
+                            outline-none
+                            transition
+                            placeholder:text-slate-400
+                            focus:border-brand-500
+                            focus:ring-4
+                            focus:ring-brand-500/10
+                        "
+                    />
+
+                </div>
+
+
+                {/* ================================================== */}
+                {/* Company Size */}
+                {/* ================================================== */}
+
+                <div>
+
+                    <label
+                        htmlFor="company-size"
+                        className="
+                            mb-2
+                            block
+                            text-sm
+                            font-semibold
+                            text-slate-700
+                        "
+                    >
+                        Размер компании
+                        <span className="ml-2 text-xs font-normal text-slate-400">
+                            необязательно
+                        </span>
+                    </label>
+
+
+                    <input
+                        id="company-size"
+                        type="text"
+                        value={size}
+                        onChange={(event) =>
+                            setSize(
+                                event.target.value,
+                            )
+                        }
+                        placeholder="Например, 11–50 сотрудников"
+                        maxLength={100}
+                        className="
+                            w-full
+                            rounded-xl
+                            border
+                            border-slate-200
+                            bg-white
+                            px-4
+                            py-3
+                            text-sm
+                            text-slate-900
+                            outline-none
+                            transition
+                            placeholder:text-slate-400
+                            focus:border-brand-500
+                            focus:ring-4
+                            focus:ring-brand-500/10
+                        "
+                    />
+
+                </div>
+
+
+                {/* ================================================== */}
+                {/* Address */}
+                {/* ================================================== */}
+
+                <div>
+
+                    <label
+                        htmlFor="company-address"
+                        className="
+                            mb-2
+                            block
+                            text-sm
+                            font-semibold
+                            text-slate-700
+                        "
+                    >
+                        Адрес
+                        <span className="ml-2 text-xs font-normal text-slate-400">
+                            необязательно
+                        </span>
+                    </label>
+
+
+                    <input
+                        id="company-address"
+                        type="text"
+                        value={address}
+                        onChange={(event) =>
+                            setAddress(
+                                event.target.value,
+                            )
+                        }
+                        placeholder="Например, Baku, Azerbaijan"
+                        maxLength={500}
+                        className="
+                            w-full
+                            rounded-xl
+                            border
+                            border-slate-200
+                            bg-white
+                            px-4
+                            py-3
+                            text-sm
+                            text-slate-900
+                            outline-none
+                            transition
+                            placeholder:text-slate-400
+                            focus:border-brand-500
+                            focus:ring-4
+                            focus:ring-brand-500/10
+                        "
+                    />
+
+                </div>
+
             </div>
 
 
+            {/* ====================================================== */}
             {/* Actions */}
+            {/* ====================================================== */}
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <div
+                className="
+                    mt-6
+                    flex
+                    flex-col
+                    gap-3
+                    sm:flex-row
+                    sm:justify-end
+                "
+            >
 
                 {onCancel && (
 

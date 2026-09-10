@@ -1,8 +1,12 @@
-from sqlalchemy import func, select
+from sqlalchemy import (
+    func,
+    select,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.app.models.application import Application
+from backend.app.models.user import User
 from backend.app.models.vacancy import Vacancy
 
 
@@ -20,10 +24,15 @@ class ApplicationRepository:
         application: Application,
     ) -> Application:
 
-        self.db.add(application)
+        self.db.add(
+            application,
+        )
 
         await self.db.commit()
-        await self.db.refresh(application)
+
+        await self.db.refresh(
+            application,
+        )
 
         return application
 
@@ -36,8 +45,14 @@ class ApplicationRepository:
         result = await self.db.execute(
             select(Application)
             .options(
-                selectinload(Application.candidate),
-                selectinload(Application.resume),
+                selectinload(
+                    Application.candidate,
+                ).selectinload(
+                    User.profile,
+                ),
+                selectinload(
+                    Application.resume,
+                ),
             )
             .where(
                 Application.id == application_id,
@@ -55,7 +70,8 @@ class ApplicationRepository:
         result = await self.db.execute(
             select(Application)
             .where(
-                Application.candidate_id == candidate_id,
+                Application.candidate_id
+                == candidate_id,
             )
             .order_by(
                 Application.created_at.desc(),
@@ -63,7 +79,7 @@ class ApplicationRepository:
         )
 
         return list(
-            result.scalars().all()
+            result.scalars().all(),
         )
 
 
@@ -75,11 +91,18 @@ class ApplicationRepository:
         result = await self.db.execute(
             select(Application)
             .options(
-                selectinload(Application.candidate),
-                selectinload(Application.resume),
+                selectinload(
+                    Application.candidate,
+                ).selectinload(
+                    User.profile,
+                ),
+                selectinload(
+                    Application.resume,
+                ),
             )
             .where(
-                Application.vacancy_id == vacancy_id,
+                Application.vacancy_id
+                == vacancy_id,
             )
             .order_by(
                 Application.created_at.desc(),
@@ -87,7 +110,7 @@ class ApplicationRepository:
         )
 
         return list(
-            result.scalars().all()
+            result.scalars().all(),
         )
 
 
@@ -98,9 +121,12 @@ class ApplicationRepository:
     ) -> Application | None:
 
         result = await self.db.execute(
-            select(Application).where(
-                Application.candidate_id == candidate_id,
-                Application.vacancy_id == vacancy_id,
+            select(Application)
+            .where(
+                Application.candidate_id
+                == candidate_id,
+                Application.vacancy_id
+                == vacancy_id,
             )
         )
 
@@ -114,14 +140,18 @@ class ApplicationRepository:
 
         result = await self.db.execute(
             select(
-                func.count(Application.id),
+                func.count(
+                    Application.id,
+                ),
             )
             .join(
                 Vacancy,
-                Application.vacancy_id == Vacancy.id,
+                Application.vacancy_id
+                == Vacancy.id,
             )
             .where(
-                Vacancy.company_id == company_id,
+                Vacancy.company_id
+                == company_id,
             )
         )
 

@@ -12,6 +12,7 @@ class ProfileRepository:
     ):
         self.db = db
 
+
     async def get_by_user_id(
         self,
         user_id: int,
@@ -19,11 +20,12 @@ class ProfileRepository:
 
         result = await self.db.execute(
             select(Profile).where(
-                Profile.user_id == user_id
+                Profile.user_id == user_id,
             )
         )
 
         return result.scalar_one_or_none()
+
 
     async def create(
         self,
@@ -34,9 +36,12 @@ class ProfileRepository:
 
         await self.db.commit()
 
-        await self.db.refresh(profile)
+        await self.db.refresh(
+            profile,
+        )
 
         return profile
+
 
     async def update(
         self,
@@ -45,6 +50,8 @@ class ProfileRepository:
 
         await self.db.commit()
 
-        await self.db.refresh(profile)
+        await self.db.refresh(
+            profile,
+        )
 
         return profile

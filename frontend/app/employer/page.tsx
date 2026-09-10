@@ -1,6 +1,7 @@
 "use client";
 
 import {
+    useCallback,
     useEffect,
     useState,
 } from "react";
@@ -19,15 +20,21 @@ import {
 import {
     getMyVacancies,
     deleteVacancy,
+    updateVacancy,
 } from "@/services/vacancy";
 
 import {
     getConversationByApplication,
+    getMyConversations,
 } from "@/services/conversation";
 
 import {
     getConversationMessages,
 } from "@/services/message";
+
+import {
+    getUnreadNotificationCount,
+} from "@/services/notification";
 
 import {
     useAuthStore,
@@ -56,6 +63,12 @@ import CompanyForm from "@/components/company/CompanyForm";
 
 import ChatPanel from "@/components/chat/ChatPanel";
 
+import InviteCandidateForm from "@/components/invitation/InviteCandidateForm";
+
+import {
+    Invitation,
+} from "@/types/invitation";
+
 
 function formatDate(
     value: string,
@@ -71,6 +84,37 @@ function formatDate(
             year: "numeric",
         },
     );
+}
+
+
+function formatSalary(
+    salary: number | null,
+    currency = "USD",
+): string {
+
+    if (salary === null) {
+
+        return "Не указана";
+    }
+
+    const symbols: Record<
+        string,
+        string
+    > = {
+        USD: "$",
+        EUR: "€",
+        AZN: "₼",
+        RUB: "₽",
+        GBP: "£",
+    };
+
+    const symbol =
+        symbols[currency] ??
+        currency;
+
+    return `${salary.toLocaleString(
+        "ru-RU",
+    )} ${symbol}`;
 }
 
 
@@ -128,18 +172,6 @@ function getStatusClass(
 }
 
 
-function formatSalary(
-    salary: number | null,
-): string {
-
-    if (salary === null) {
-        return "Не указана";
-    }
-
-    return `${salary.toLocaleString("ru-RU")} $`;
-}
-
-
 function getApiErrorMessage(
     error: any,
     fallback: string,
@@ -148,11 +180,10 @@ function getApiErrorMessage(
     const detail =
         error?.response?.data?.detail;
 
-
     if (typeof detail === "string") {
+
         return detail;
     }
-
 
     if (Array.isArray(detail)) {
 
@@ -164,6 +195,7 @@ function getApiErrorMessage(
                         typeof item ===
                         "string"
                     ) {
+
                         return item;
                     }
 
@@ -172,11 +204,11 @@ function getApiErrorMessage(
                         typeof item.msg ===
                         "string"
                     ) {
+
                         return item.msg;
                     }
 
                     return null;
-
                 })
                 .filter(
                     (
@@ -185,20 +217,19 @@ function getApiErrorMessage(
                         Boolean(message),
                 );
 
-
         if (messages.length > 0) {
+
             return messages.join("\n");
         }
     }
-
 
     if (
         typeof error?.message ===
         "string"
     ) {
+
         return error.message;
     }
-
 
     return fallback;
 }
@@ -212,18 +243,15 @@ export default function EmployerPage() {
     const router =
         useRouter();
 
-
     const user =
         useAuthStore(
             (state) => state.user,
         );
 
-
     const initialized =
         useAuthStore(
             (state) => state.initialized,
         );
-
 
     const initialize =
         useAuthStore(
@@ -231,17 +259,10 @@ export default function EmployerPage() {
         );
 
 
-    /*
-     * ============================================================
-     * Conversation из notification
-     * ============================================================
-     */
-
     const conversationParam =
         searchParams.get(
             "conversation",
         );
-
 
     const parsedConversationId =
         conversationParam
@@ -249,7 +270,6 @@ export default function EmployerPage() {
                 conversationParam,
             )
             : null;
-
 
     const notificationConversationId =
         parsedConversationId !== null
@@ -263,17 +283,10 @@ export default function EmployerPage() {
             : null;
 
 
-    /*
-     * ============================================================
-     * State
-     * ============================================================
-     */
-
     const [
         vacancies,
         setVacancies,
     ] = useState<Vacancy[]>([]);
-
 
     const [
         selectedVacancy,
@@ -289,18 +302,15 @@ export default function EmployerPage() {
         null,
     );
 
-
     const [
         companyLoading,
         setCompanyLoading,
     ] = useState(true);
 
-
     const [
         companyFormOpen,
         setCompanyFormOpen,
     ] = useState(false);
-
 
     const [
         companyError,
@@ -316,12 +326,25 @@ export default function EmployerPage() {
         EmployerApplication[]
     >([]);
 
-
     const [
         applicationsCount,
         setApplicationsCount,
     ] = useState(0);
 
+    const [
+        newApplicationsCount,
+        setNewApplicationsCount,
+    ] = useState(0);
+
+    const [
+        unreadNotifications,
+        setUnreadNotifications,
+    ] = useState(0);
+
+    const [
+        unreadMessages,
+        setUnreadMessages,
+    ] = useState(0);
 
     const [
         selectedChatApplicationId,
@@ -330,7 +353,6 @@ export default function EmployerPage() {
         null,
     );
 
-
     const [
         applicationHasMessages,
         setApplicationHasMessages,
@@ -338,18 +360,48 @@ export default function EmployerPage() {
         Record<number, boolean>
     >({});
 
+    const [
+        expandedApplicationId,
+        setExpandedApplicationId,
+    ] = useState<number | null>(
+        null,
+    );
+
+    const [
+        invitationApplication,
+        setInvitationApplication,
+    ] = useState<EmployerApplication | null>(
+        null,
+    );
+
+    const [
+        invitationVacancy,
+        setInvitationVacancy,
+    ] = useState<Vacancy | null>(
+        null,
+    );
 
     const [
         loading,
         setLoading,
     ] = useState(true);
 
-
     const [
         applicationsLoading,
         setApplicationsLoading,
     ] = useState(false);
 
+    const [
+        dashboardRefreshing,
+        setDashboardRefreshing,
+    ] = useState(false);
+
+    const [
+        vacancyUpdating,
+        setVacancyUpdating,
+    ] = useState<number | null>(
+        null,
+    );
 
     const [
         statusUpdating,
@@ -357,7 +409,6 @@ export default function EmployerPage() {
     ] = useState<number | null>(
         null,
     );
-
 
     const [
         error,
@@ -367,18 +418,11 @@ export default function EmployerPage() {
     );
 
 
-    /*
-     * ============================================================
-     * Авторизация
-     * ============================================================
-     */
-
     useEffect(() => {
 
         if (!initialized) {
 
             initialize();
-
         }
 
     }, [
@@ -387,30 +431,198 @@ export default function EmployerPage() {
     ]);
 
 
-    /*
-     * ============================================================
-     * Загружаем вакансии работодателя
-     * ============================================================
-     */
+    const loadDashboard =
+        useCallback(
+            async (
+                showMainLoading = true,
+            ) => {
+
+                if (
+                    !initialized
+                    ||
+                    !user
+                    ||
+                    user.role !== "employer"
+                ) {
+
+                    return;
+                }
+
+                if (showMainLoading) {
+
+                    setLoading(true);
+
+                } else {
+
+                    setDashboardRefreshing(
+                        true,
+                    );
+                }
+
+                setError(null);
+
+                try {
+
+                    const [
+                        vacanciesResponse,
+                        applicationsCountResponse,
+                        unreadNotificationResponse,
+                        conversationsResponse,
+                    ] = await Promise.all([
+                        getMyVacancies(),
+                        getMyEmployerApplicationCount(),
+                        getUnreadNotificationCount(),
+                        getMyConversations(),
+                    ]);
+
+
+                    /*
+                     * ----------------------------------------------------
+                     * Overview statistics
+                     * ----------------------------------------------------
+                     *
+                     * Active vacancies are calculated from the employer's
+                     * own vacancies.
+                     *
+                     * New applications are calculated from the
+                     * applications belonging to the employer's vacancies.
+                     *
+                     * We use the existing applications endpoint instead
+                     * of creating a new backend endpoint.
+                     */
+
+                    let newApplications = 0;
+
+                    if (
+                        vacanciesResponse.length > 0
+                    ) {
+
+                        const applicationsByVacancy =
+                            await Promise.all(
+                                vacanciesResponse.map(
+                                    async (
+                                        vacancy,
+                                    ) => {
+
+                                        try {
+
+                                            return await getVacancyApplications(
+                                                vacancy.id,
+                                            );
+
+                                        } catch {
+
+                                            return [];
+                                        }
+                                    },
+                                ),
+                            );
+
+
+                        newApplications =
+                            applicationsByVacancy.reduce(
+                                (
+                                    total,
+                                    vacancyApplications,
+                                ) =>
+                                    total +
+                                    vacancyApplications.filter(
+                                        (
+                                            application,
+                                        ) =>
+                                            application.status ===
+                                            "new",
+                                    ).length,
+                                0,
+                            );
+                    }
+
+
+                    setVacancies(
+                        vacanciesResponse,
+                    );
+
+                    setApplicationsCount(
+                        applicationsCountResponse,
+                    );
+
+                    setNewApplicationsCount(
+                        newApplications,
+                    );
+
+                    setUnreadNotifications(
+                        unreadNotificationResponse,
+                    );
+
+                    setUnreadMessages(
+                        conversationsResponse.reduce(
+                            (
+                                total,
+                                conversation,
+                            ) =>
+                                total +
+                                conversation.unread_count,
+                            0,
+                        ),
+                    );
+
+                    setSelectedVacancy(
+                        (current) => {
+
+                            if (!current) {
+
+                                return null;
+                            }
+
+                            return (
+                                vacanciesResponse.find(
+                                    (vacancy) =>
+                                        vacancy.id ===
+                                        current.id,
+                                ) ??
+                                null
+                            );
+                        },
+                    );
+
+                } catch (error: any) {
+
+                    setError(
+                        getApiErrorMessage(
+                            error,
+                            "Не удалось загрузить данные кабинета.",
+                        ),
+                    );
+
+                } finally {
+
+                    if (showMainLoading) {
+
+                        setLoading(false);
+
+                    } else {
+
+                        setDashboardRefreshing(
+                            false,
+                        );
+                    }
+                }
+            },
+            [
+                initialized,
+                user,
+            ],
+        );
+
 
     useEffect(() => {
 
-        if (!initialized) {
-            return;
-        }
-
-
-        if (!user) {
-
-            setLoading(false);
-
-            return;
-        }
-
-
         if (
-            user.role !==
-            "employer"
+            !initialized
+            ||
+            !user
+            ||
+            user.role !== "employer"
         ) {
 
             setLoading(false);
@@ -418,67 +630,21 @@ export default function EmployerPage() {
             return;
         }
 
-
-        async function load() {
-
-            setLoading(true);
-            setError(null);
-
-
-            try {
-
-                const [
-                    vacanciesResponse,
-                    applicationsCountResponse,
-                ] = await Promise.all([
-                    getMyVacancies(),
-                    getMyEmployerApplicationCount(),
-                ]);
-
-
-                setVacancies(
-                    vacanciesResponse,
-                );
-
-
-                setApplicationsCount(
-                    applicationsCountResponse,
-                );
-
-            } catch (error: any) {
-
-                const message =
-                    getApiErrorMessage(
-                        error,
-                        "Не удалось загрузить данные кабинета.",
-                    );
-
-
-                setError(
-                    message,
-                );
-
-            } finally {
-
-                setLoading(false);
-
-            }
-        }
-
-
-        load();
+        loadDashboard();
 
     }, [
         initialized,
         user,
+        loadDashboard,
     ]);
+
 
     useEffect(() => {
 
         if (!initialized) {
+
             return;
         }
-
 
         if (
             !user
@@ -491,18 +657,16 @@ export default function EmployerPage() {
             return;
         }
 
-
         async function loadCompany() {
 
             setCompanyLoading(true);
-            setCompanyError(null);
 
+            setCompanyError(null);
 
             try {
 
                 const response =
                     await getMyCompany();
-
 
                 setCompany(
                     response,
@@ -512,7 +676,6 @@ export default function EmployerPage() {
 
                 const status =
                     error?.response?.status;
-
 
                 if (status === 404) {
 
@@ -528,17 +691,13 @@ export default function EmployerPage() {
                             "Не удалось загрузить данные компании.",
                         ),
                     );
-
                 }
 
             } finally {
 
                 setCompanyLoading(false);
-
             }
-
         }
-
 
         loadCompany();
 
@@ -547,11 +706,98 @@ export default function EmployerPage() {
         user,
     ]);
 
-    /*
-     * ============================================================
-     * Загружаем отклики выбранной вакансии
-     * ============================================================
-     */
+
+    const loadApplications =
+        useCallback(
+            async (
+                vacancyId: number,
+            ) => {
+
+                setApplicationsLoading(
+                    true,
+                );
+
+                setError(null);
+
+                try {
+
+                    const response =
+                        await getVacancyApplications(
+                            vacancyId,
+                        );
+
+                    setApplications(
+                        response,
+                    );
+
+                    const messageStates:
+                        Record<number, boolean> =
+                        {};
+
+                    await Promise.all(
+                        response.map(
+                            async (
+                                application,
+                            ) => {
+
+                                try {
+
+                                    const conversation =
+                                        await getConversationByApplication(
+                                            application.id,
+                                        );
+
+                                    const messages =
+                                        await getConversationMessages(
+                                            conversation.id,
+                                        );
+
+                                    messageStates[
+                                        application.id
+                                    ] =
+                                        messages.length >
+                                        0;
+
+                                } catch {
+
+                                    messageStates[
+                                        application.id
+                                    ] =
+                                        false;
+                                }
+                            },
+                        ),
+                    );
+
+                    setApplicationHasMessages(
+                        messageStates,
+                    );
+
+                } catch (error: any) {
+
+                    setError(
+                        getApiErrorMessage(
+                            error,
+                            "Не удалось загрузить отклики.",
+                        ),
+                    );
+
+                    setApplications([]);
+
+                    setApplicationHasMessages(
+                        {},
+                    );
+
+                } finally {
+
+                    setApplicationsLoading(
+                        false,
+                    );
+                }
+            },
+            [],
+        );
+
 
     useEffect(() => {
 
@@ -563,6 +809,10 @@ export default function EmployerPage() {
                 null,
             );
 
+            setExpandedApplicationId(
+                null,
+            );
+
             setApplicationHasMessages(
                 {},
             );
@@ -570,134 +820,90 @@ export default function EmployerPage() {
             return;
         }
 
-
-        async function loadApplications() {
-
-            setApplicationsLoading(
-                true,
-            );
-
-            setError(null);
-
-
-            try {
-
-                const response =
-                    await getVacancyApplications(
-                        selectedVacancy.id,
-                    );
-
-
-                setApplications(
-                    response,
-                );
-
-
-                const messageStates:
-                    Record<number, boolean> = {};
-
-
-                await Promise.all(
-                    response.map(
-                        async (
-                            application,
-                        ) => {
-
-                            try {
-
-                                const conversation =
-                                    await getConversationByApplication(
-                                        application.id,
-                                    );
-
-
-                                const messages =
-                                    await getConversationMessages(
-                                        conversation.id,
-                                    );
-
-
-                                messageStates[
-                                    application.id
-                                ] =
-                                    messages.length >
-                                    0;
-
-                            } catch {
-
-                                messageStates[
-                                    application.id
-                                ] = false;
-
-                            }
-
-                        },
-                    ),
-                );
-
-
-                setApplicationHasMessages(
-                    messageStates,
-                );
-
-            } catch (error: any) {
-
-                const message =
-                    getApiErrorMessage(
-                        error,
-                        "Не удалось загрузить отклики.",
-                    );
-
-
-                setError(
-                    message,
-                );
-
-
-                setApplications(
-                    [],
-                );
-
-
-                setApplicationHasMessages(
-                    {},
-                );
-
-            } finally {
-
-                setApplicationsLoading(
-                    false,
-                );
-
-            }
-        }
-
-
-        loadApplications();
+        loadApplications(
+            selectedVacancy.id,
+        );
 
     }, [
         selectedVacancy,
+        loadApplications,
     ]);
 
 
-    /*
-     * ============================================================
-     * Если открыли employer через notification,
-     * находим вакансию, которой принадлежит conversation.
-     *
-     * Для этого нам пока не нужен отдельный backend endpoint:
-     * ChatPanel сам умеет открыть conversation напрямую.
-     *
-     * Поэтому selectedVacancy здесь НЕ обязателен.
-     * ============================================================
-     */
+    async function handleRefreshApplications() {
+
+        if (!selectedVacancy) {
+
+            return;
+        }
+
+        await loadApplications(
+            selectedVacancy.id,
+        );
+
+        await loadDashboard(
+            false,
+        );
+    }
 
 
-    /*
-     * ============================================================
-     * Изменение статуса
-     * ============================================================
-     */
+    async function handleToggleVacancy(
+        vacancy: Vacancy,
+    ) {
+
+        setVacancyUpdating(
+            vacancy.id,
+        );
+
+        setError(null);
+
+        try {
+
+            const updated =
+                await updateVacancy(
+                    vacancy.id,
+                    {
+                        is_active:
+                            !vacancy.is_active,
+                    },
+                );
+
+            setVacancies(
+                (current) =>
+                    current.map(
+                        (item) =>
+                            item.id ===
+                            updated.id
+                                ? updated
+                                : item,
+                    ),
+            );
+
+            setSelectedVacancy(
+                (current) =>
+                    current?.id ===
+                    updated.id
+                        ? updated
+                        : current,
+            );
+
+        } catch (error: any) {
+
+            setError(
+                getApiErrorMessage(
+                    error,
+                    "Не удалось изменить статус вакансии.",
+                ),
+            );
+
+        } finally {
+
+            setVacancyUpdating(
+                null,
+            );
+        }
+    }
+
 
     async function handleStatusChange(
         applicationId: number,
@@ -705,17 +911,15 @@ export default function EmployerPage() {
     ) {
 
         if (!selectedVacancy) {
+
             return;
         }
-
 
         setStatusUpdating(
             applicationId,
         );
 
-
         setError(null);
-
 
         try {
 
@@ -724,24 +928,12 @@ export default function EmployerPage() {
                 status,
             );
 
+            await loadApplications(
+                selectedVacancy.id,
+            );
 
-            /*
-             * После PATCH заново загружаем
-             * весь список откликов.
-             *
-             * Это гарантирует, что frontend
-             * получает актуальный status
-             * непосредственно из базы данных.
-             */
-
-            const refreshed =
-                await getVacancyApplications(
-                    selectedVacancy.id,
-                );
-
-
-            setApplications(
-                refreshed,
+            await loadDashboard(
+                false,
             );
 
         } catch (error: any) {
@@ -758,15 +950,9 @@ export default function EmployerPage() {
             setStatusUpdating(
                 null,
             );
-
         }
     }
 
-    /*
-     * ============================================================
-     * Обычное открытие чата работодателем
-     * ============================================================
-     */
 
     function handleOpenChat(
         applicationId: number,
@@ -775,7 +961,6 @@ export default function EmployerPage() {
         setSelectedChatApplicationId(
             applicationId,
         );
-
 
         window.setTimeout(
             () => {
@@ -795,22 +980,65 @@ export default function EmployerPage() {
     }
 
 
-    /*
-     * ============================================================
-     * Переход к чату из notification
-     * ============================================================
-     *
-     * Главный фикс.
-     *
-     * Мы НЕ пытаемся угадать,
-     * когда ChatPanel появится.
-     *
-     * Проверяем DOM каждые 150ms.
-     *
-     * Как только ChatPanel появился —
-     * прокручиваем к нему.
-     * ============================================================
-     */
+    async function handleDeleteVacancy(
+        vacancy: Vacancy,
+    ) {
+
+        const confirmed =
+            window.confirm(
+                `Удалить вакансию «${vacancy.title}»? Это действие нельзя отменить.`,
+            );
+
+        if (!confirmed) {
+
+            return;
+        }
+
+        try {
+
+            setError(null);
+
+            await deleteVacancy(
+                vacancy.id,
+            );
+
+            setVacancies(
+                (current) =>
+                    current.filter(
+                        (item) =>
+                            item.id !==
+                            vacancy.id,
+                    ),
+            );
+
+            if (
+                selectedVacancy?.id ===
+                vacancy.id
+            ) {
+
+                setSelectedVacancy(
+                    null,
+                );
+
+                setApplications([]);
+
+            }
+
+            await loadDashboard(
+                false,
+            );
+
+        } catch (error: any) {
+
+            setError(
+                getApiErrorMessage(
+                    error,
+                    "Не удалось удалить вакансию.",
+                ),
+            );
+        }
+    }
+
 
     useEffect(() => {
 
@@ -818,31 +1046,24 @@ export default function EmployerPage() {
             notificationConversationId ===
             null
         ) {
+
             return;
         }
-
 
         if (
             !initialized
             ||
             !user
+            ||
+            user.role !== "employer"
         ) {
+
             return;
         }
-
-
-        if (
-            user.role !==
-            "employer"
-        ) {
-            return;
-        }
-
 
         let attempts = 0;
 
         const maxAttempts = 40;
-
 
         const scrollToChat =
             () => {
@@ -851,7 +1072,6 @@ export default function EmployerPage() {
                     document.getElementById(
                         "employer-chat",
                     );
-
 
                 if (chatElement) {
 
@@ -863,9 +1083,7 @@ export default function EmployerPage() {
                     return;
                 }
 
-
                 attempts += 1;
-
 
                 if (
                     attempts <
@@ -876,10 +1094,8 @@ export default function EmployerPage() {
                         scrollToChat,
                         150,
                     );
-
                 }
             };
-
 
         const timer =
             window.setTimeout(
@@ -887,13 +1103,11 @@ export default function EmployerPage() {
                 100,
             );
 
-
         return () => {
 
             window.clearTimeout(
                 timer,
             );
-
         };
 
     }, [
@@ -903,12 +1117,6 @@ export default function EmployerPage() {
         loading,
     ]);
 
-
-    /*
-     * ============================================================
-     * Loading
-     * ============================================================
-     */
 
     if (
         !initialized
@@ -930,12 +1138,6 @@ export default function EmployerPage() {
     }
 
 
-    /*
-     * ============================================================
-     * Не авторизован
-     * ============================================================
-     */
-
     if (!user) {
 
         return (
@@ -947,11 +1149,9 @@ export default function EmployerPage() {
                         🔐
                     </div>
 
-
                     <h1 className="text-xl font-bold text-slate-900">
                         Требуется авторизация
                     </h1>
-
 
                     <p className="mt-2 text-sm text-slate-500">
                         Войдите в аккаунт, чтобы открыть кабинет.
@@ -963,12 +1163,6 @@ export default function EmployerPage() {
         );
     }
 
-
-    /*
-     * ============================================================
-     * Не работодатель
-     * ============================================================
-     */
 
     if (
         user.role !==
@@ -984,11 +1178,9 @@ export default function EmployerPage() {
                         👤
                     </div>
 
-
                     <h1 className="text-xl font-bold text-slate-900">
                         Кабинет работодателя
                     </h1>
-
 
                     <p className="mt-2 text-sm text-slate-500">
                         Этот раздел доступен только работодателям.
@@ -1001,25 +1193,50 @@ export default function EmployerPage() {
     }
 
 
+    const activeVacanciesCount =
+        vacancies.filter(
+            (vacancy) =>
+                vacancy.is_active,
+        ).length;
+
+
     return (
 
         <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
 
-            <div className="mb-8">
+            <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 
-                <p className="text-sm font-medium text-brand-600">
-                    Личный кабинет
-                </p>
+                <div>
+
+                    <p className="text-sm font-medium text-brand-600">
+                        Личный кабинет
+                    </p>
+
+                    <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">
+                        Кабинет работодателя
+                    </h1>
+
+                    <p className="mt-2 text-sm text-slate-500">
+                        Управляйте вакансиями и откликами кандидатов.
+                    </p>
+
+                </div>
 
 
-                <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">
-                    Кабинет работодателя
-                </h1>
-
-
-                <p className="mt-2 text-sm text-slate-500">
-                    Управляйте вакансиями и откликами кандидатов.
-                </p>
+                <button
+                    type="button"
+                    disabled={dashboardRefreshing}
+                    onClick={() =>
+                        loadDashboard(
+                            false,
+                        )
+                    }
+                    className="rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {dashboardRefreshing
+                        ? "Обновление..."
+                        : "↻ Обновить кабинет"}
+                </button>
 
             </div>
 
@@ -1041,8 +1258,110 @@ export default function EmployerPage() {
                 >
                     {error}
                 </div>
-
             )}
+
+
+            {/* ============================================================
+                OVERVIEW
+            ============================================================ */}
+
+            <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-5">
+
+                {/* Active vacancies */}
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Активные вакансии
+                    </p>
+
+                    <p className="mt-2 text-3xl font-extrabold text-slate-900">
+                        {activeVacanciesCount}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                        Сейчас опубликованы
+                    </p>
+
+                </div>
+
+
+                {/* Total applications */}
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Отклики
+                    </p>
+
+                    <p className="mt-2 text-3xl font-extrabold text-slate-900">
+                        {applicationsCount}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                        На все вакансии
+                    </p>
+
+                </div>
+
+
+                {/* New applications */}
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Новые отклики
+                    </p>
+
+                    <p className="mt-2 text-3xl font-extrabold text-slate-900">
+                        {newApplicationsCount}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                        Требуют рассмотрения
+                    </p>
+
+                </div>
+
+
+                {/* Unread messages */}
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Сообщения
+                    </p>
+
+                    <p className="mt-2 text-3xl font-extrabold text-slate-900">
+                        {unreadMessages}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                        Непрочитанных
+                    </p>
+
+                </div>
+
+
+                {/* Unread notifications */}
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Уведомления
+                    </p>
+
+                    <p className="mt-2 text-3xl font-extrabold text-slate-900">
+                        {unreadNotifications}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                        Непрочитанных
+                    </p>
+
+                </div>
+
+            </div>
 
 
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">
@@ -1059,25 +1378,34 @@ export default function EmployerPage() {
 
                         </div>
 
-
                         <h2 className="mt-4 font-bold text-slate-900">
                             Работодатель
                         </h2>
 
-
                         <p className="mt-1 break-all text-sm text-slate-500">
                             {user.email}
                         </p>
-
 
                         <div className="mt-5 border-t border-slate-100 pt-5">
 
                             <div className="flex items-center justify-between text-sm">
 
                                 <span className="text-slate-500">
-                                    Вакансии
+                                    Активные вакансии
                                 </span>
 
+                                <span className="font-bold text-slate-900">
+                                    {activeVacanciesCount}
+                                </span>
+
+                            </div>
+
+
+                            <div className="mt-3 flex items-center justify-between text-sm">
+
+                                <span className="text-slate-500">
+                                    Всего вакансий
+                                </span>
 
                                 <span className="font-bold text-slate-900">
                                     {vacancies.length}
@@ -1092,9 +1420,21 @@ export default function EmployerPage() {
                                     Отклики
                                 </span>
 
-
                                 <span className="font-bold text-slate-900">
                                     {applicationsCount}
+                                </span>
+
+                            </div>
+
+
+                            <div className="mt-3 flex items-center justify-between text-sm">
+
+                                <span className="text-slate-500">
+                                    Новые отклики
+                                </span>
+
+                                <span className="font-bold text-brand-600">
+                                    {newApplicationsCount}
                                 </span>
 
                             </div>
@@ -1108,48 +1448,36 @@ export default function EmployerPage() {
 
                 <div className="space-y-8">
 
-                    {/* ================================================== */}
-                    {/* Vacancies */}
-                    {/* ================================================== */}
-
                     <section>
 
-                        {/* ================================================== */}
-                        {/* Company */}
-                        {/* ================================================== */}
+                        <div className="mb-4">
 
-                        <section>
+                            <h2 className="text-xl font-bold text-slate-900">
+                                Моя компания
+                            </h2>
 
-                            <div className="mb-4">
+                            <p className="mt-1 text-sm text-slate-500">
+                                Информация о компании, которая отображается работодателем.
+                            </p>
 
-                                <h2 className="text-xl font-bold text-slate-900">
-                                    Моя компания
-                                </h2>
-
-                                <p className="mt-1 text-sm text-slate-500">
-                                    Информация о компании, которая отображается работодателем.
-                                </p>
-
-                            </div>
+                        </div>
 
 
-                            {companyLoading ? (
+                        {companyLoading ? (
 
-                                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
-                                    <div className="animate-pulse">
+                                <div className="animate-pulse">
 
-                                        <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-4">
 
-                                            <div className="h-16 w-16 rounded-2xl bg-slate-200" />
+                                        <div className="h-16 w-16 rounded-2xl bg-slate-200" />
 
-                                            <div className="space-y-2">
+                                        <div className="space-y-2">
 
-                                                <div className="h-5 w-48 rounded bg-slate-200" />
+                                            <div className="h-5 w-48 rounded bg-slate-200" />
 
-                                                <div className="h-4 w-32 rounded bg-slate-200" />
-
-                                            </div>
+                                            <div className="h-4 w-32 rounded bg-slate-200" />
 
                                         </div>
 
@@ -1157,99 +1485,89 @@ export default function EmployerPage() {
 
                                 </div>
 
-                            ) : companyFormOpen ? (
+                            </div>
 
-                                <CompanyForm
+                        ) : companyFormOpen ? (
 
-                                    company={company}
+                            <CompanyForm
+                                company={company}
+                                onSaved={(savedCompany) => {
 
-                                    onSaved={(savedCompany) => {
+                                    setCompany(
+                                        savedCompany,
+                                    );
 
-                                        setCompany(
-                                            savedCompany,
-                                        );
+                                    setCompanyFormOpen(
+                                        false,
+                                    );
 
-                                        setCompanyFormOpen(
-                                            false,
-                                        );
+                                }}
+                                onCancel={() =>
+                                    setCompanyFormOpen(
+                                        false,
+                                    )
+                                }
+                            />
 
-                                    }}
+                        ) : company ? (
 
-                                    onCancel={() =>
-                                        setCompanyFormOpen(
-                                            false,
-                                        )
-                                    }
+                            <CompanyCard
+                                company={company}
+                                onEdit={() =>
+                                    setCompanyFormOpen(
+                                        true,
+                                    )
+                                }
+                            />
 
-                                />
+                        ) : (
 
-                            ) : company ? (
+                            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
 
-                                <CompanyCard
+                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50">
 
-                                    company={company}
+                                    <span className="text-2xl">
+                                        🏢
+                                    </span>
 
-                                    onEdit={() =>
+                                </div>
+
+                                <h3 className="mt-4 text-lg font-bold text-slate-900">
+                                    Компания ещё не создана
+                                </h3>
+
+                                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                                    Создайте профиль компании, чтобы добавить информацию о работодателе.
+                                </p>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
                                         setCompanyFormOpen(
                                             true,
                                         )
                                     }
+                                    className="mt-5 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/20 transition hover:bg-brand-700"
+                                >
+                                    Создать компанию
+                                </button>
 
-                                />
+                            </div>
 
-                            ) : (
+                        )}
 
-                                <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
+                        {companyError && (
 
-                                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50">
+                            <p className="mt-3 text-sm text-red-600">
+                                {companyError}
+                            </p>
 
-                                        <span className="text-2xl">
-                                            🏢
-                                        </span>
+                        )}
 
-                                    </div>
-
-
-                                    <h3 className="mt-4 text-lg font-bold text-slate-900">
-                                        Компания ещё не создана
-                                    </h3>
-
-
-                                    <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-                                        Создайте профиль компании, чтобы добавить информацию о работодателе.
-                                    </p>
+                    </section>
 
 
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setCompanyFormOpen(
-                                                true,
-                                            )
-                                        }
-                                        className="
-                                            mt-5
-                                            rounded-xl
-                                            bg-brand-600
-                                            px-5
-                                            py-2.5
-                                            text-sm
-                                            font-semibold
-                                            text-white
-                                            shadow-lg
-                                            shadow-brand-500/20
-                                            transition
-                                            hover:bg-brand-700
-                                        "
-                                    >
-                                        Создать компанию
-                                    </button>
-
-                                </div>
-
-                            )}
-
-                        </section>
+                    <section>
 
                         <div className="mb-4">
 
@@ -1257,9 +1575,8 @@ export default function EmployerPage() {
                                 Мои вакансии
                             </h2>
 
-
                             <p className="mt-1 text-sm text-slate-500">
-                                Выберите вакансию, чтобы посмотреть отклики кандидатов.
+                                Управляйте публикацией вакансий и просматривайте отклики.
                             </p>
 
                         </div>
@@ -1273,11 +1590,9 @@ export default function EmployerPage() {
                                     💼
                                 </div>
 
-
                                 <h3 className="mt-3 font-bold text-slate-800">
                                     У вас пока нет вакансий
                                 </h3>
-
 
                                 <p className="mt-1 text-sm text-slate-500">
                                     Создайте вакансию, чтобы начать получать отклики.
@@ -1290,14 +1605,15 @@ export default function EmployerPage() {
                             <div className="space-y-4">
 
                                 {vacancies.map(
-                                    (
-                                        vacancy,
-                                    ) => {
+                                    (vacancy) => {
 
                                         const isSelected =
                                             selectedVacancy?.id ===
                                             vacancy.id;
 
+                                        const updating =
+                                            vacancyUpdating ===
+                                            vacancy.id;
 
                                         return (
 
@@ -1306,12 +1622,10 @@ export default function EmployerPage() {
                                                     vacancy.id
                                                 }
                                                 className={`
-                                                    w-full
                                                     rounded-2xl
                                                     border
                                                     bg-white
                                                     p-6
-                                                    text-left
                                                     shadow-sm
                                                     transition
                                                     ${
@@ -1327,31 +1641,27 @@ export default function EmployerPage() {
                                                     tabIndex={0}
                                                     onClick={() => {
 
-                                                        setSelectedVacancy(
-                                                            vacancy,
-                                                        );
-
-                                                        setSelectedChatApplicationId(
-                                                            null,
+                                                        router.push(
+                                                            `/vacancies/${vacancy.id}`,
                                                         );
 
                                                     }}
-                                                    onKeyDown={(event) => {
+                                                    onKeyDown={(
+                                                        event,
+                                                    ) => {
 
                                                         if (
-                                                            event.key === "Enter"
+                                                            event.key ===
+                                                                "Enter"
                                                             ||
-                                                            event.key === " "
+                                                            event.key ===
+                                                                " "
                                                         ) {
 
                                                             event.preventDefault();
 
-                                                            setSelectedVacancy(
-                                                                vacancy,
-                                                            );
-
-                                                            setSelectedChatApplicationId(
-                                                                null,
+                                                            router.push(
+                                                                `/vacancies/${vacancy.id}`,
                                                             );
                                                         }
                                                     }}
@@ -1360,148 +1670,218 @@ export default function EmployerPage() {
 
                                                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 
-                                                    <div>
+                                                        <div>
 
-                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <div className="flex flex-wrap items-center gap-2">
 
-                                                            <h3 className="text-lg font-bold text-slate-900">
-                                                                {
-                                                                    vacancy.title
-                                                                }
-                                                            </h3>
+                                                                <h3 className="text-lg font-bold text-slate-900">
+                                                                    {
+                                                                        vacancy.title
+                                                                    }
+                                                                </h3>
 
 
-                                                            {vacancy.is_remote && (
-
-                                                                <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-600">
-                                                                    Remote
+                                                                <span
+                                                                    className={`
+                                                                        rounded-md
+                                                                        px-2
+                                                                        py-1
+                                                                        text-xs
+                                                                        font-semibold
+                                                                        ${
+                                                                            vacancy.is_active
+                                                                                ? "bg-emerald-50 text-emerald-600"
+                                                                                : "bg-slate-100 text-slate-500"
+                                                                        }
+                                                                    `}
+                                                                >
+                                                                    {vacancy.is_active
+                                                                        ? "Активна"
+                                                                        : "Неактивна"}
                                                                 </span>
 
-                                                            )}
+
+                                                                {vacancy.is_remote && (
+
+                                                                    <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-600">
+                                                                        Remote
+                                                                    </span>
+                                                                )}
+
+                                                            </div>
+
+
+                                                            <p className="mt-1 text-sm font-medium text-brand-600">
+                                                                {
+                                                                    vacancy.category
+                                                                }
+                                                            </p>
+
+
+                                                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+
+                                                                <span className="rounded-lg bg-slate-100 px-2.5 py-1">
+                                                                    📍{" "}
+                                                                    {
+                                                                        vacancy.location
+                                                                    }
+                                                                </span>
+
+
+                                                                <span className="rounded-lg bg-slate-100 px-2.5 py-1">
+                                                                    💰{" "}
+                                                                    {
+                                                                        vacancy.salary_from !==
+                                                                        null
+                                                                            ? formatSalary(
+                                                                                vacancy.salary_from,
+                                                                                vacancy.currency,
+                                                                            )
+                                                                            : "Зарплата не указана"
+                                                                    }
+                                                                </span>
+
+                                                            </div>
 
                                                         </div>
 
 
-                                                        <p className="mt-1 text-sm font-medium text-brand-600">
-                                                            {
-                                                                vacancy.category
-                                                            }
-                                                        </p>
-
-
-                                                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-
-                                                            <span className="rounded-lg bg-slate-100 px-2.5 py-1">
-                                                                📍{" "}
-                                                                {
-                                                                    vacancy.location
+                                                        <span
+                                                            className={`
+                                                                shrink-0
+                                                                rounded-xl
+                                                                px-3
+                                                                py-2
+                                                                text-xs
+                                                                font-semibold
+                                                                ${
+                                                                    isSelected
+                                                                        ? "bg-brand-50 text-brand-600"
+                                                                        : "bg-slate-100 text-slate-600"
                                                                 }
-                                                            </span>
-
-
-                                                            <span className="rounded-lg bg-slate-100 px-2.5 py-1">
-                                                                💰{" "}
-                                                                {
-                                                                    vacancy.salary_from !==
-                                                                    null
-                                                                        ? `${vacancy.salary_from.toLocaleString("ru-RU")} $`
-                                                                        : "Зарплата не указана"
-                                                                }
-                                                            </span>
-
-                                                        </div>
+                                                            `}
+                                                        >
+                                                            Открыть карточку →
+                                                        </span>
 
                                                     </div>
 
-
-                                                    <span
-                                                        className={`
-                                                            shrink-0
-                                                            rounded-xl
-                                                            px-3
-                                                            py-2
-                                                            text-xs
-                                                            font-semibold
-                                                            ${
-                                                                isSelected
-                                                                    ? "bg-brand-50 text-brand-600"
-                                                                    : "bg-slate-100 text-slate-600"
-                                                            }
-                                                        `}
-                                                    >
-                                                        Выбрать
-                                                    </span>
-
-                                                    </div>
 
                                                     <div className="mt-5 flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
 
                                                         <button
                                                             type="button"
-                                                            onClick={(event) => {
+                                                            disabled={
+                                                                updating
+                                                            }
+                                                            onClick={(
+                                                                event,
+                                                            ) => {
+
                                                                 event.stopPropagation();
+
+                                                                handleToggleVacancy(
+                                                                    vacancy,
+                                                                );
+
+                                                            }}
+                                                            className={`
+                                                                rounded-xl
+                                                                px-4
+                                                                py-2.5
+                                                                text-xs
+                                                                font-semibold
+                                                                transition
+                                                                disabled:cursor-not-allowed
+                                                                disabled:opacity-60
+                                                                ${
+                                                                    vacancy.is_active
+                                                                        ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                                                        : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                                                }
+                                                            `}
+                                                        >
+                                                            {updating
+                                                                ? "Сохранение..."
+                                                                : vacancy.is_active
+                                                                    ? "Деактивировать"
+                                                                    : "Активировать"}
+                                                        </button>
+
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={(
+                                                                event,
+                                                            ) => {
+
+                                                                event.stopPropagation();
+
+                                                                setSelectedVacancy(
+                                                                    vacancy,
+                                                                );
+
+                                                                setSelectedChatApplicationId(
+                                                                    null,
+                                                                );
+
+                                                            }}
+                                                            className="rounded-xl bg-brand-50 px-4 py-2.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100"
+                                                        >
+                                                            Отклики
+                                                        </button>
+
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={(
+                                                                event,
+                                                            ) => {
+
+                                                                event.stopPropagation();
+
+                                                                setInvitationVacancy(
+                                                                    vacancy,
+                                                                );
+
+                                                            }}
+                                                            className="rounded-xl bg-violet-50 px-4 py-2.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
+                                                        >
+                                                            ✉ Пригласить кандидата
+                                                        </button>
+
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={(
+                                                                event,
+                                                            ) => {
+
+                                                                event.stopPropagation();
+
                                                                 router.push(
                                                                     `/employer/vacancies/${vacancy.id}`,
                                                                 );
+
                                                             }}
                                                             className="rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
                                                         >
                                                             Редактировать
                                                         </button>
 
+
                                                         <button
                                                             type="button"
-                                                            onClick={async (event) => {
+                                                            onClick={(
+                                                                event,
+                                                            ) => {
+
                                                                 event.stopPropagation();
 
-                                                                const confirmed = window.confirm(
-                                                                    `Удалить вакансию «${vacancy.title}»? Это действие нельзя отменить.`,
+                                                                handleDeleteVacancy(
+                                                                    vacancy,
                                                                 );
 
-                                                                if (!confirmed) {
-                                                                    return;
-                                                                }
-
-                                                                try {
-
-                                                                    setError(null);
-
-                                                                    await deleteVacancy(
-                                                                        vacancy.id,
-                                                                    );
-
-                                                                    setVacancies(
-                                                                        (current) =>
-                                                                            current.filter(
-                                                                                (item) =>
-                                                                                    item.id !==
-                                                                                    vacancy.id,
-                                                                            ),
-                                                                    );
-
-                                                                    if (
-                                                                        selectedVacancy?.id ===
-                                                                        vacancy.id
-                                                                    ) {
-
-                                                                        setSelectedVacancy(
-                                                                            null,
-                                                                        );
-
-                                                                        setApplications(
-                                                                            [],
-                                                                        );
-                                                                    }
-
-                                                                } catch (error: any) {
-
-                                                                    setError(
-                                                                        getApiErrorMessage(
-                                                                            error,
-                                                                            "Не удалось удалить вакансию.",
-                                                                        ),
-                                                                    );
-                                                                }
                                                             }}
                                                             className="rounded-xl bg-red-50 px-4 py-2.5 text-xs font-semibold text-red-600 transition hover:bg-red-100"
                                                         >
@@ -1513,22 +1893,15 @@ export default function EmployerPage() {
                                                 </div>
 
                                             </article>
-
                                         );
-
                                     },
                                 )}
 
                             </div>
-
                         )}
 
                     </section>
 
-
-                    {/* ================================================== */}
-                    {/* Applications */}
-                    {/* ================================================== */}
 
                     <section>
 
@@ -1539,7 +1912,6 @@ export default function EmployerPage() {
                                 <h2 className="text-xl font-bold text-slate-900">
                                     Отклики кандидатов
                                 </h2>
-
 
                                 <p className="mt-1 text-sm text-slate-500">
 
@@ -1554,15 +1926,20 @@ export default function EmployerPage() {
 
                             {selectedVacancy && (
 
-                                <span className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">
-
-                                    Откликов:{" "}
-                                    {
-                                        applications.length
+                                <button
+                                    type="button"
+                                    disabled={
+                                        applicationsLoading
                                     }
-
-                                </span>
-
+                                    onClick={
+                                        handleRefreshApplications
+                                    }
+                                    className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {applicationsLoading
+                                        ? "Обновление..."
+                                        : "↻ Обновить"}
+                                </button>
                             )}
 
                         </div>
@@ -1576,11 +1953,9 @@ export default function EmployerPage() {
                                     👈
                                 </div>
 
-
                                 <h3 className="mt-3 font-bold text-slate-800">
                                     Выберите вакансию
                                 </h3>
-
 
                                 <p className="mt-1 text-sm text-slate-500">
                                     После выбора здесь появятся отклики кандидатов.
@@ -1596,7 +1971,6 @@ export default function EmployerPage() {
                                     ⏳
                                 </div>
 
-
                                 <p className="mt-3 text-sm text-slate-500">
                                     Загрузка откликов...
                                 </p>
@@ -1611,11 +1985,9 @@ export default function EmployerPage() {
                                     📬
                                 </div>
 
-
                                 <h3 className="mt-3 font-bold text-slate-800">
                                     Откликов пока нет
                                 </h3>
-
 
                                 <p className="mt-1 text-sm text-slate-500">
                                     Когда кандидат откликнется на эту вакансию, его отклик появится здесь.
@@ -1636,12 +2008,29 @@ export default function EmployerPage() {
                                             selectedChatApplicationId ===
                                             application.id;
 
-
                                         const hasMessages =
                                             applicationHasMessages[
                                                 application.id
                                             ] === true;
 
+                                        const profile =
+                                            application.profile;
+
+                                        const isExpanded =
+                                            expandedApplicationId ===
+                                            application.id;
+
+                                        const fullName =
+                                            [
+                                                profile?.first_name,
+                                                profile?.last_name,
+                                            ]
+                                                .filter(
+                                                    Boolean,
+                                                )
+                                                .join(
+                                                    " ",
+                                                );
 
                                         return (
 
@@ -1649,45 +2038,59 @@ export default function EmployerPage() {
                                                 key={
                                                     application.id
                                                 }
-                                                className="
-                                                    rounded-2xl
-                                                    border
-                                                    border-slate-200
-                                                    bg-white
-                                                    p-6
-                                                    shadow-sm
-                                                "
+                                                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
                                             >
 
                                                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 
-                                                    <div>
+                                                    <div className="flex items-start gap-4">
 
-                                                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-lg font-bold text-white">
+                                                        {profile?.avatar_url ? (
 
-                                                            {application.candidate_email
-                                                                .charAt(
-                                                                    0,
-                                                                )
-                                                                .toUpperCase()}
+                                                            <img
+                                                                src={
+                                                                    profile.avatar_url
+                                                                }
+                                                                alt=""
+                                                                className="h-14 w-14 rounded-xl object-cover ring-1 ring-slate-200"
+                                                            />
+
+                                                        ) : (
+
+                                                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-lg font-bold text-white">
+
+                                                                {application.candidate_email
+                                                                    .charAt(
+                                                                        0,
+                                                                    )
+                                                                    .toUpperCase()}
+
+                                                            </div>
+                                                        )}
+
+
+                                                        <div>
+
+                                                            <h3 className="text-lg font-bold text-slate-900">
+                                                                {
+                                                                    fullName ||
+                                                                    application.candidate_email
+                                                                }
+                                                            </h3>
+
+                                                            <p className="mt-1 text-sm text-slate-500">
+                                                                {
+                                                                    application.candidate_email
+                                                                }
+                                                            </p>
+
+                                                            <p className="mt-1 text-sm font-medium text-brand-600">
+                                                                {
+                                                                    application.resume.desired_position
+                                                                }
+                                                            </p>
 
                                                         </div>
-
-
-                                                        <h3 className="mt-3 text-lg font-bold text-slate-900">
-                                                            {
-                                                                application.candidate_email
-                                                            }
-                                                        </h3>
-
-
-                                                        <p className="mt-1 text-sm font-medium text-brand-600">
-                                                            {
-                                                                application
-                                                                    .resume
-                                                                    .desired_position
-                                                            }
-                                                        </p>
 
                                                     </div>
 
@@ -1731,21 +2134,17 @@ export default function EmployerPage() {
                                                             Новый
                                                         </option>
 
-
                                                         <option value="reviewing">
                                                             На рассмотрении
                                                         </option>
-
 
                                                         <option value="interview">
                                                             Собеседование
                                                         </option>
 
-
                                                         <option value="rejected">
                                                             Отклонён
                                                         </option>
-
 
                                                         <option value="hired">
                                                             Принят
@@ -1766,12 +2165,9 @@ export default function EmployerPage() {
                                                                 Резюме
                                                             </p>
 
-
                                                             <p className="mt-1 text-sm font-semibold text-slate-800">
                                                                 {
-                                                                    application
-                                                                        .resume
-                                                                        .title
+                                                                    application.resume.title
                                                                 }
                                                             </p>
 
@@ -1784,12 +2180,10 @@ export default function EmployerPage() {
                                                                 Город
                                                             </p>
 
-
                                                             <p className="mt-1 text-sm text-slate-700">
                                                                 {
-                                                                    application
-                                                                        .resume
-                                                                        .city ??
+                                                                    application.resume.city ??
+                                                                    profile?.city ??
                                                                     "Не указан"
                                                                 }
                                                             </p>
@@ -1803,13 +2197,10 @@ export default function EmployerPage() {
                                                                 Зарплатные ожидания
                                                             </p>
 
-
                                                             <p className="mt-1 text-sm text-slate-700">
                                                                 {
                                                                     formatSalary(
-                                                                        application
-                                                                            .resume
-                                                                            .salary_expectation,
+                                                                        application.resume.salary_expectation,
                                                                     )
                                                                 }
                                                             </p>
@@ -1822,7 +2213,6 @@ export default function EmployerPage() {
                                                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                                                                 Дата отклика
                                                             </p>
-
 
                                                             <p className="mt-1 text-sm text-slate-700">
                                                                 {
@@ -1844,15 +2234,12 @@ export default function EmployerPage() {
                                                     <div className="mt-5 rounded-xl bg-slate-50 p-4">
 
                                                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                                                            О кандидате
+                                                            О кандидате в резюме
                                                         </p>
-
 
                                                         <p className="mt-2 text-sm leading-6 text-slate-600">
                                                             {
-                                                                application
-                                                                    .resume
-                                                                    .about
+                                                                application.resume.about
                                                             }
                                                         </p>
 
@@ -1868,7 +2255,6 @@ export default function EmployerPage() {
                                                         <p className="text-xs font-semibold uppercase tracking-wide text-brand-500">
                                                             Сопроводительное письмо
                                                         </p>
-
 
                                                         <p className="mt-2 text-sm leading-6 text-slate-700">
                                                             {
@@ -1888,7 +2274,6 @@ export default function EmployerPage() {
                                                         <span
                                                             className={`
                                                                 inline-flex
-                                                                w-fit
                                                                 rounded-xl
                                                                 px-3
                                                                 py-2
@@ -1906,7 +2291,6 @@ export default function EmployerPage() {
                                                             }
                                                         </span>
 
-
                                                         <span className="text-xs text-slate-400">
                                                             ID отклика: #
                                                             {
@@ -1917,53 +2301,592 @@ export default function EmployerPage() {
                                                     </div>
 
 
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            handleOpenChat(
-                                                                application.id,
-                                                            )
-                                                        }
-                                                        className={`
-                                                            rounded-xl
-                                                            px-4
-                                                            py-2.5
-                                                            text-xs
-                                                            font-semibold
-                                                            transition
-                                                            ${
-                                                                isChatSelected
-                                                                    ? "bg-brand-100 text-brand-700"
-                                                                    : "bg-brand-600 text-white hover:bg-brand-700"
+                                                    <div className="flex flex-wrap gap-2">
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setExpandedApplicationId(
+                                                                    isExpanded
+                                                                        ? null
+                                                                        : application.id,
+                                                                )
                                                             }
-                                                        `}
-                                                    >
+                                                            className="rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+                                                        >
+                                                            {isExpanded
+                                                                ? "Скрыть профиль"
+                                                                : "Профиль кандидата"}
+                                                        </button>
 
-                                                        {isChatSelected
-                                                            ? "Чат открыт"
-                                                            : hasMessages
-                                                                ? "💬 Открыть чат"
-                                                                : "💬 Начать чат"}
 
-                                                    </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                handleOpenChat(
+                                                                    application.id,
+                                                                )
+                                                            }
+                                                            className={`
+                                                                rounded-xl
+                                                                px-4
+                                                                py-2.5
+                                                                text-xs
+                                                                font-semibold
+                                                                transition
+                                                                ${
+                                                                    isChatSelected
+                                                                        ? "bg-brand-100 text-brand-700"
+                                                                        : "bg-brand-600 text-white hover:bg-brand-700"
+                                                                }
+                                                            `}
+                                                        >
+                                                            {isChatSelected
+                                                                ? "Чат открыт"
+                                                                : hasMessages
+                                                                    ? "💬 Открыть чат"
+                                                                    : "💬 Начать чат"}
+                                                        </button>
+
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setInvitationApplication(
+                                                                    application,
+                                                                )
+                                                            }
+                                                            className="rounded-xl bg-violet-50 px-4 py-2.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
+                                                        >
+                                                            ✉ Пригласить
+                                                        </button>
+
+                                                    </div>
 
                                                 </div>
 
+
+                                                {isExpanded && (
+
+                                                    <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+
+                                                        <div className="flex items-center justify-between">
+
+                                                            <div>
+
+                                                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                                    Профиль кандидата
+                                                                </p>
+
+                                                                <h4 className="mt-1 text-lg font-bold text-slate-900">
+                                                                    {
+                                                                        fullName ||
+                                                                        "Профиль без имени"
+                                                                    }
+                                                                </h4>
+
+                                                            </div>
+
+                                                        </div>
+
+
+                                                        {profile ? (
+
+                                                            <div className="mt-5 space-y-5">
+
+                                                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                                                                    <div>
+
+                                                                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                                            Телефон
+                                                                        </p>
+
+                                                                        <p className="mt-1 text-sm text-slate-700">
+                                                                            {
+                                                                                profile.phone ??
+                                                                                "Не указан"
+                                                                            }
+                                                                        </p>
+
+                                                                    </div>
+
+
+                                                                    <div>
+
+                                                                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                                            Город
+                                                                        </p>
+
+                                                                        <p className="mt-1 text-sm text-slate-700">
+                                                                            {
+                                                                                profile.city ??
+                                                                                application.resume.city ??
+                                                                                "Не указан"
+                                                                            }
+                                                                        </p>
+
+                                                                    </div>
+
+                                                                </div>
+
+
+                                                                {profile.bio && (
+
+                                                                    <div>
+
+                                                                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                                            О себе
+                                                                        </p>
+
+                                                                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                                                                            {
+                                                                                profile.bio
+                                                                            }
+                                                                        </p>
+
+                                                                    </div>
+
+                                                                )}
+
+
+                                                                {profile.skills.length >
+                                                                    0 && (
+
+                                                                    <div>
+
+                                                                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                                            Навыки
+                                                                        </p>
+
+                                                                        <div className="mt-2 flex flex-wrap gap-2">
+
+                                                                            {profile.skills.map(
+                                                                                (
+                                                                                    skill,
+                                                                                    index,
+                                                                                ) => (
+
+                                                                                    <span
+                                                                                        key={`${skill}-${index}`}
+                                                                                        className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                                                                                    >
+                                                                                        {
+                                                                                            skill
+                                                                                        }
+                                                                                    </span>
+
+                                                                                ),
+                                                                            )}
+
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                )}
+
+
+                                                                {profile.experience.length >
+                                                                    0 && (
+
+                                                                    <div>
+
+                                                                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                                            Опыт работы
+                                                                        </p>
+
+                                                                        <div className="mt-3 space-y-3">
+
+                                                                            {profile.experience.map(
+                                                                                (
+                                                                                    item,
+                                                                                    index,
+                                                                                ) => (
+
+                                                                                    <div
+                                                                                        key={`${item.company}-${item.position}-${index}`}
+                                                                                        className="rounded-xl bg-white p-4 ring-1 ring-slate-200"
+                                                                                    >
+
+                                                                                        <p className="font-semibold text-slate-900">
+                                                                                            {
+                                                                                                item.position
+                                                                                            }
+                                                                                        </p>
+
+                                                                                        <p className="mt-1 text-sm text-brand-600">
+                                                                                            {
+                                                                                                item.company
+                                                                                            }
+                                                                                        </p>
+
+                                                                                        <p className="mt-1 text-xs text-slate-400">
+                                                                                            {
+                                                                                                item.start_date
+                                                                                            }
+                                                                                            {" — "}
+                                                                                            {
+                                                                                                item.end_date ??
+                                                                                                "по настоящее время"
+                                                                                            }
+                                                                                        </p>
+
+                                                                                        {item.description && (
+
+                                                                                            <p className="mt-3 text-sm leading-6 text-slate-600">
+                                                                                                {
+                                                                                                    item.description
+                                                                                                }
+                                                                                            </p>
+
+                                                                                        )}
+
+                                                                                    </div>
+                                                                                ),
+                                                                            )}
+
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                )}
+
+
+                                                                {profile.education.length >
+                                                                    0 && (
+
+                                                                    <div>
+
+                                                                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                                            Образование
+                                                                        </p>
+
+                                                                        <div className="mt-3 space-y-3">
+
+                                                                            {profile.education.map(
+                                                                                (
+                                                                                    item,
+                                                                                    index,
+                                                                                ) => (
+
+                                                                                    <div
+                                                                                        key={`${item.institution}-${index}`}
+                                                                                        className="rounded-xl bg-white p-4 ring-1 ring-slate-200"
+                                                                                    >
+
+                                                                                        <p className="font-semibold text-slate-900">
+                                                                                            {
+                                                                                                item.institution
+                                                                                            }
+                                                                                        </p>
+
+                                                                                        {(item.degree ||
+                                                                                            item.field) && (
+
+                                                                                            <p className="mt-1 text-sm text-slate-600">
+                                                                                                {
+                                                                                                    [
+                                                                                                        item.degree,
+                                                                                                        item.field,
+                                                                                                    ]
+                                                                                                        .filter(
+                                                                                                            Boolean,
+                                                                                                        )
+                                                                                                        .join(
+                                                                                                            " • ",
+                                                                                                        )
+                                                                                                }
+                                                                                            </p>
+
+                                                                                        )}
+
+                                                                                        {(item.start_date ||
+                                                                                            item.end_date) && (
+
+                                                                                            <p className="mt-1 text-xs text-slate-400">
+                                                                                                {
+                                                                                                    item.start_date ??
+                                                                                                    ""
+                                                                                                }
+                                                                                                {" — "}
+                                                                                                {
+                                                                                                    item.end_date ??
+                                                                                                    "по настоящее время"
+                                                                                                }
+                                                                                            </p>
+
+                                                                                        )}
+
+                                                                                    </div>
+                                                                                ),
+                                                                            )}
+
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                )}
+
+
+                                                                {profile.languages.length >
+                                                                    0 && (
+
+                                                                    <div>
+
+                                                                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                                            Языки
+                                                                        </p>
+
+                                                                        <div className="mt-2 flex flex-wrap gap-2">
+
+                                                                            {profile.languages.map(
+                                                                                (
+                                                                                    language,
+                                                                                    index,
+                                                                                ) => (
+
+                                                                                    <span
+                                                                                        key={`${language.name}-${index}`}
+                                                                                        className="rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                                                                                    >
+                                                                                        {
+                                                                                            language.name
+                                                                                        }
+                                                                                        {" — "}
+                                                                                        {
+                                                                                            language.level
+                                                                                        }
+                                                                                    </span>
+
+                                                                                ),
+                                                                            )}
+
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                )}
+
+
+                                                                {profile.projects.length >
+                                                                    0 && (
+
+                                                                    <div>
+
+                                                                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                                            Личные проекты
+                                                                        </p>
+
+                                                                        <div className="mt-3 space-y-3">
+
+                                                                            {profile.projects.map(
+                                                                                (
+                                                                                    project,
+                                                                                    index,
+                                                                                ) => (
+
+                                                                                    <div
+                                                                                        key={`${project.name}-${index}`}
+                                                                                        className="rounded-xl bg-white p-4 ring-1 ring-slate-200"
+                                                                                    >
+
+                                                                                        <p className="font-semibold text-slate-900">
+                                                                                            {
+                                                                                                project.name
+                                                                                            }
+                                                                                        </p>
+
+                                                                                        {project.description && (
+
+                                                                                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                                                                                                {
+                                                                                                    project.description
+                                                                                                }
+                                                                                            </p>
+
+                                                                                        )}
+
+                                                                                        {project.url && (
+
+                                                                                            <a
+                                                                                                href={
+                                                                                                    project.url
+                                                                                                }
+                                                                                                target="_blank"
+                                                                                                rel="noreferrer"
+                                                                                                className="mt-2 inline-block text-xs font-semibold text-brand-600 hover:text-brand-700"
+                                                                                            >
+                                                                                                Открыть проект →
+                                                                                            </a>
+
+                                                                                        )}
+
+                                                                                    </div>
+                                                                                ),
+                                                                            )}
+
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                )}
+
+
+                                                                {(profile.github_url ||
+                                                                    profile.linkedin_url) && (
+
+                                                                    <div>
+
+                                                                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                                            Ссылки
+                                                                        </p>
+
+                                                                        <div className="mt-2 flex flex-wrap gap-2">
+
+                                                                            {profile.github_url && (
+
+                                                                                <a
+                                                                                    href={
+                                                                                        profile.github_url
+                                                                                    }
+                                                                                    target="_blank"
+                                                                                    rel="noreferrer"
+                                                                                    className="rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
+                                                                                >
+                                                                                    GitHub →
+                                                                                </a>
+
+                                                                            )}
+
+                                                                            {profile.linkedin_url && (
+
+                                                                                <a
+                                                                                    href={
+                                                                                        profile.linkedin_url
+                                                                                    }
+                                                                                    target="_blank"
+                                                                                    rel="noreferrer"
+                                                                                    className="rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
+                                                                                >
+                                                                                    LinkedIn →
+                                                                                </a>
+
+                                                                            )}
+
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                )}
+
+                                                            </div>
+
+                                                        ) : (
+
+                                                            <div className="mt-4 rounded-xl bg-white p-4 text-sm text-slate-500 ring-1 ring-slate-200">
+                                                                Профиль кандидата пока не заполнен.
+                                                            </div>
+
+                                                        )}
+
+                                                    </div>
+
+                                                )}
+
                                             </article>
-
                                         );
-
                                     },
                                 )}
 
                             </div>
-
                         )}
 
 
-                        {/* ================================================== */}
-                        {/* Chat */}
-                        {/* ================================================== */}
+                        {invitationApplication && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6">
+                                <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+
+                                    <div className="mb-4 flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setInvitationApplication(null)
+                                            }
+                                            className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+                                            aria-label="Закрыть"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+
+                                    <InviteCandidateForm
+                                        vacancyId={
+                                            selectedVacancy?.id ??
+                                            invitationApplication.vacancy_id
+                                        }
+                                        initialCandidateEmail={
+                                            invitationApplication.candidate_email
+                                        }
+                                        vacancyTitle={
+                                            selectedVacancy?.title ??
+                                            undefined
+                                        }
+                                        onSuccess={(
+                                            _invitation: Invitation,
+                                        ) => {
+                                            window.setTimeout(() => {
+                                                setInvitationApplication(null);
+                                            }, 1200);
+                                        }}
+                                        onClose={() =>
+                                            setInvitationApplication(null)
+                                        }
+                                    />
+
+                                </div>
+                            </div>
+                        )}
+
+                        {invitationVacancy && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6">
+                                <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+
+                                    <div className="mb-4 flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setInvitationVacancy(null)
+                                            }
+                                            className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+                                            aria-label="Закрыть"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+
+                                    <InviteCandidateForm
+                                        vacancyId={
+                                            invitationVacancy.id
+                                        }
+                                        vacancyTitle={
+                                            invitationVacancy.title
+                                        }
+                                        onSuccess={(
+                                            _invitation: Invitation,
+                                        ) => {
+                                            window.setTimeout(() => {
+                                                setInvitationVacancy(null);
+                                            }, 1200);
+                                        }}
+                                        onClose={() =>
+                                            setInvitationVacancy(null)
+                                        }
+                                    />
+
+                                </div>
+                            </div>
+                        )}
+
 
                         {(
                             selectedChatApplicationId !==
@@ -1979,15 +2902,6 @@ export default function EmployerPage() {
                             >
 
                                 <ChatPanel
-
-                                    /*
-                                     * При обычном открытии:
-                                     *
-                                     * applicationId →
-                                     * ChatPanel сам получает/
-                                     * создаёт conversation.
-                                     */
-
                                     applicationId={
                                         notificationConversationId ===
                                         null
@@ -1995,24 +2909,13 @@ export default function EmployerPage() {
                                               undefined
                                             : undefined
                                     }
-
-
-                                    /*
-                                     * При переходе из notification:
-                                     *
-                                     * conversationId →
-                                     * открываем существующий чат.
-                                     */
-
                                     conversationId={
                                         notificationConversationId ??
                                         undefined
                                     }
-
                                 />
 
                             </div>
-
                         )}
 
                     </section>
@@ -2024,3 +2927,4 @@ export default function EmployerPage() {
         </main>
     );
 }
+

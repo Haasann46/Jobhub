@@ -8,6 +8,7 @@ from backend.app.models.enums import (
     ExperienceLevel,
     VacancyCategory,
 )
+from backend.app.models.technology import Technology
 from backend.app.models.vacancy import Vacancy
 from backend.app.query_builders.vacancy_search import (
     apply_category,
@@ -31,6 +32,10 @@ class VacancyRepository:
         self.db = db
 
 
+    # ============================================================
+    # Get all vacancies
+    # ============================================================
+
     async def get_all(
         self,
     ) -> list[Vacancy]:
@@ -53,6 +58,10 @@ class VacancyRepository:
             result.scalars().all()
         )
 
+
+    # ============================================================
+    # Get active vacancies
+    # ============================================================
 
     async def get_active(
         self,
@@ -79,6 +88,10 @@ class VacancyRepository:
             result.scalars().all()
         )
 
+
+    # ============================================================
+    # Search
+    # ============================================================
 
     async def search(
         self,
@@ -111,7 +124,6 @@ class VacancyRepository:
                 Vacancy.is_active.is_(True),
             )
         )
-
 
         query = apply_search(
             query,
@@ -149,50 +161,51 @@ class VacancyRepository:
             is_remote,
         )
 
-
         count_query = (
             select(
-                func.count()
+                func.count(),
             )
             .select_from(
-                query.subquery()
+                query.subquery(),
             )
         )
 
         total = await self.db.scalar(
-            count_query
+            count_query,
         )
-
 
         query = apply_sort(
             query,
             sort,
         )
 
-
         query = (
             query
             .offset(
-                (page - 1) * size
+                (page - 1) * size,
             )
             .limit(
-                size
+                size,
             )
         )
 
-
         result = await self.db.execute(
-            query
+            query,
         )
-
 
         vacancies = list(
             result.scalars().all()
         )
 
+        return (
+            vacancies,
+            total or 0,
+        )
 
-        return vacancies, total or 0
 
+    # ============================================================
+    # Get vacancy by ID
+    # ============================================================
 
     async def get_by_id(
         self,
@@ -219,12 +232,63 @@ class VacancyRepository:
         return result.scalar_one_or_none()
 
 
+    # ============================================================
+    # Technologies
+    # ============================================================
+
+    async def get_all_technologies(
+        self,
+    ) -> list[Technology]:
+
+        result = await self.db.execute(
+            select(Technology)
+            .order_by(
+                Technology.name.asc(),
+            )
+        )
+
+        return list(
+            result.scalars().all()
+        )
+
+
+    async def get_technologies_by_ids(
+        self,
+        technology_ids: list[int],
+    ) -> list[Technology]:
+
+        if not technology_ids:
+            return []
+
+        result = await self.db.execute(
+            select(Technology)
+            .where(
+                Technology.id.in_(
+                    technology_ids,
+                ),
+            )
+            .order_by(
+                Technology.name.asc(),
+            )
+        )
+
+        return list(
+            result.scalars().all()
+        )
+
+
+    # ============================================================
+    # Create
+    # ============================================================
+
     async def create(
         self,
         vacancy: Vacancy,
     ) -> Vacancy:
 
-        self.db.add(vacancy)
+        self.db.add(
+            vacancy,
+        )
 
         try:
 
@@ -242,13 +306,16 @@ class VacancyRepository:
 
             raise
 
-
         await self.db.refresh(
             vacancy,
         )
 
         return vacancy
 
+
+    # ============================================================
+    # Update
+    # ============================================================
 
     async def update(
         self,
@@ -264,6 +331,10 @@ class VacancyRepository:
         return vacancy
 
 
+    # ============================================================
+    # Delete
+    # ============================================================
+
     async def delete(
         self,
         vacancy: Vacancy,
@@ -275,6 +346,10 @@ class VacancyRepository:
 
         await self.db.commit()
 
+
+    # ============================================================
+    # Employer vacancies
+    # ============================================================
 
     async def get_by_company_id(
         self,
@@ -295,6 +370,41 @@ class VacancyRepository:
             )
             .where(
                 Vacancy.company_id == company_id,
+            )
+        )
+
+        return list(
+            result.scalars().all()
+        )
+
+
+    # ============================================================
+    # Public company vacancies
+    # ============================================================
+
+    async def get_active_by_company_id(
+        self,
+        company_id: int,
+    ) -> list[Vacancy]:
+
+        result = await self.db.execute(
+            select(Vacancy)
+            .options(
+                selectinload(
+                    Vacancy.company,
+                ).selectinload(
+                    Company.owner,
+                ),
+                selectinload(
+                    Vacancy.technologies,
+                ),
+            )
+            .where(
+                Vacancy.company_id == company_id,
+                Vacancy.is_active.is_(True),
+            )
+            .order_by(
+                Vacancy.published_at.desc(),
             )
         )
 

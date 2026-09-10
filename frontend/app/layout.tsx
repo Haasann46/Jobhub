@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+
 import "./globals.css";
 
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import AuthProvider from "@/components/auth/AuthProvider";
+
 
 export const metadata: Metadata = {
     title: "JobHub",
@@ -19,7 +21,10 @@ export default function RootLayout({
 
     return (
 
-        <html lang="ru">
+        <html
+            lang="ru"
+            data-scroll-behavior="smooth"
+        >
 
             <body className="min-h-screen bg-slate-50 text-slate-900">
 

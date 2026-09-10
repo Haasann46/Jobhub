@@ -4,6 +4,8 @@ import {
     useState,
 } from "react";
 
+import Link from "next/link";
+
 import { useRouter } from "next/navigation";
 
 import { Vacancy } from "@/types/vacancy";
@@ -81,6 +83,14 @@ export default function VacancyCard({
     };
 
 
+    const handleCompanyClick = (
+        event: React.MouseEvent<HTMLAnchorElement>,
+    ) => {
+
+        event.stopPropagation();
+    };
+
+
     return (
         <>
 
@@ -114,12 +124,34 @@ export default function VacancyCard({
                             <img
                                 src={vacancy.company_logo}
                                 alt={vacancy.company_name}
-                                className="h-12 w-12 rounded-xl border border-slate-100 object-cover"
+                                className="
+                                    h-12
+                                    w-12
+                                    rounded-xl
+                                    border
+                                    border-slate-100
+                                    object-cover
+                                "
                             />
 
                         ) : (
 
-                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-sm font-bold text-white">
+                            <div
+                                className="
+                                    flex
+                                    h-12
+                                    w-12
+                                    items-center
+                                    justify-center
+                                    rounded-xl
+                                    bg-gradient-to-tr
+                                    from-brand-600
+                                    to-indigo-600
+                                    text-sm
+                                    font-bold
+                                    text-white
+                                "
+                            >
 
                                 {vacancy.company_name
                                     .charAt(0)
@@ -128,6 +160,7 @@ export default function VacancyCard({
                             </div>
 
                         )}
+
 
                         <div>
 
@@ -149,19 +182,41 @@ export default function VacancyCard({
 
                             </div>
 
+
                             <h3 className="mt-0.5 text-base font-bold text-slate-900 transition group-hover:text-brand-600 sm:text-lg">
 
                                 {vacancy.title}
 
                             </h3>
 
-                            <p className="text-xs font-medium text-slate-500">
+
+                            <Link
+                                href={`/companies/${vacancy.company_id}`}
+                                onClick={
+                                    handleCompanyClick
+                                }
+                                className="
+                                    inline-flex
+                                    text-xs
+                                    font-medium
+                                    text-slate-500
+                                    transition
+                                    hover:text-brand-600
+                                "
+                            >
 
                                 {vacancy.company_name}
+
+                            </Link>
+
+
+                            <span className="text-xs font-medium text-slate-500">
+
                                 {" • "}
+
                                 {vacancy.location}
 
-                            </p>
+                            </span>
 
                         </div>
 
@@ -174,6 +229,7 @@ export default function VacancyCard({
                             vacancyId={vacancy.id}
                         />
 
+
                         <div className="mt-1 text-right">
 
                             <span className="block text-base font-extrabold text-slate-900">
@@ -184,6 +240,7 @@ export default function VacancyCard({
                                 )}
 
                             </span>
+
 
                             <span className="mt-1 inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-600">
 
@@ -211,7 +268,15 @@ export default function VacancyCard({
 
                                     <span
                                         key={technology.id}
-                                        className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
+                                        className="
+                                            rounded-lg
+                                            bg-slate-100
+                                            px-2.5
+                                            py-1
+                                            text-xs
+                                            font-medium
+                                            text-slate-600
+                                        "
                                     >
                                         {technology.name}
                                     </span>

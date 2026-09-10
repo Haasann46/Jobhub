@@ -15,6 +15,7 @@ class ProfileService:
     ):
         self.repository = repository
 
+
     async def get_me(
         self,
         current_user: User,
@@ -36,6 +37,7 @@ class ProfileService:
             profile,
         )
 
+
     async def update_me(
         self,
         current_user: User,
@@ -54,15 +56,21 @@ class ProfileService:
                 )
             )
 
-        for field, value in data.model_dump(
+
+        update_data = data.model_dump(
             exclude_unset=True,
-        ).items():
+            mode="json",
+        )
+
+
+        for field, value in update_data.items():
 
             setattr(
                 profile,
                 field,
                 value,
             )
+
 
         profile = await self.repository.update(
             profile,

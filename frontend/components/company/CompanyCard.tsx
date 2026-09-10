@@ -30,11 +30,29 @@ export default function CompanyCard({
             "
         >
 
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div
+                className="
+                    flex
+                    flex-col
+                    gap-5
+                    sm:flex-row
+                    sm:items-start
+                    sm:justify-between
+                "
+            >
 
-                <div className="flex min-w-0 items-start gap-4">
+                <div
+                    className="
+                        flex
+                        min-w-0
+                        items-start
+                        gap-4
+                    "
+                >
 
+                    {/* ================================================== */}
                     {/* Logo */}
+                    {/* ================================================== */}
 
                     {company.logo_url ? (
 
@@ -83,15 +101,51 @@ export default function CompanyCard({
 
                     <div className="min-w-0">
 
-                        <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
+                        <p
+                            className="
+                                text-xs
+                                font-semibold
+                                uppercase
+                                tracking-wide
+                                text-brand-600
+                            "
+                        >
                             Моя компания
                         </p>
 
 
-                        <h3 className="mt-1 break-words text-xl font-bold text-slate-900">
+                        <h3
+                            className="
+                                mt-1
+                                break-words
+                                text-xl
+                                font-bold
+                                text-slate-900
+                            "
+                        >
                             {company.name}
                         </h3>
 
+
+                        {/* Industry */}
+
+                        {company.industry && (
+
+                            <p
+                                className="
+                                    mt-1
+                                    text-sm
+                                    font-medium
+                                    text-slate-500
+                                "
+                            >
+                                {company.industry}
+                            </p>
+
+                        )}
+
+
+                        {/* Website */}
 
                         {company.website && (
 
@@ -119,6 +173,8 @@ export default function CompanyCard({
                 </div>
 
 
+                {/* Edit */}
+
                 <button
                     type="button"
                     onClick={onEdit}
@@ -141,13 +197,121 @@ export default function CompanyCard({
             </div>
 
 
+            {/* ========================================================== */}
+            {/* Description */}
+            {/* ========================================================== */}
+
             {company.description && (
 
-                <div className="mt-6 border-t border-slate-100 pt-5">
+                <div
+                    className="
+                        mt-6
+                        border-t
+                        border-slate-100
+                        pt-5
+                    "
+                >
 
-                    <p className="whitespace-pre-line text-sm leading-6 text-slate-600">
+                    <p
+                        className="
+                            whitespace-pre-line
+                            text-sm
+                            leading-6
+                            text-slate-600
+                        "
+                    >
                         {company.description}
                     </p>
+
+                </div>
+
+            )}
+
+
+            {/* ========================================================== */}
+            {/* Additional information */}
+            {/* ========================================================== */}
+
+            {(company.size || company.address) && (
+
+                <div
+                    className="
+                        mt-5
+                        grid
+                        gap-3
+                        border-t
+                        border-slate-100
+                        pt-5
+                        sm:grid-cols-2
+                    "
+                >
+
+                    {/* Size */}
+
+                    {company.size && (
+
+                        <div>
+
+                            <p
+                                className="
+                                    text-xs
+                                    font-semibold
+                                    uppercase
+                                    tracking-wide
+                                    text-slate-400
+                                "
+                            >
+                                Размер компании
+                            </p>
+
+                            <p
+                                className="
+                                    mt-1
+                                    text-sm
+                                    font-medium
+                                    text-slate-700
+                                "
+                            >
+                                {company.size}
+                            </p>
+
+                        </div>
+
+                    )}
+
+
+                    {/* Address */}
+
+                    {company.address && (
+
+                        <div>
+
+                            <p
+                                className="
+                                    text-xs
+                                    font-semibold
+                                    uppercase
+                                    tracking-wide
+                                    text-slate-400
+                                "
+                            >
+                                Адрес
+                            </p>
+
+                            <p
+                                className="
+                                    mt-1
+                                    text-sm
+                                    font-medium
+                                    text-slate-700
+                                "
+                            >
+                                {company.address}
+                            </p>
+
+                        </div>
+
+                    )}
 
                 </div>
 

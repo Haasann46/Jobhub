@@ -48,3 +48,32 @@ class NotificationType(str, Enum):
     APPLICATION_STATUS_CHANGED = "application_status_changed"
     INVITATION = "invitation"
     NEW_VACANCY = "new_vacancy"
+
+
+class InvitationStatus(str, Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    DECLINED = "declined"
+
+class ComplaintReason(str, Enum):
+
+    SPAM = "spam"
+
+    SCAM = "scam"
+
+    FALSE_INFORMATION = "false_information"
+
+    INAPPROPRIATE_CONTENT = "inappropriate_content"
+
+    OTHER = "other"
+
+
+class ComplaintStatus(str, Enum):
+
+    PENDING = "pending"
+
+    REVIEWING = "reviewing"
+
+    RESOLVED = "resolved"
+
+    REJECTED = "rejected"

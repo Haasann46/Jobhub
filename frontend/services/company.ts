@@ -7,6 +7,12 @@ import {
 } from "@/types/company";
 
 
+/*
+ * ============================================================
+ * Создание компании
+ * ============================================================
+ */
+
 export async function createCompany(
     data: CompanyCreateData,
 ): Promise<Company> {
@@ -21,6 +27,12 @@ export async function createCompany(
 }
 
 
+/*
+ * ============================================================
+ * Моя компания
+ * ============================================================
+ */
+
 export async function getMyCompany():
     Promise<Company> {
 
@@ -33,6 +45,12 @@ export async function getMyCompany():
 }
 
 
+/*
+ * ============================================================
+ * Изменение моей компании
+ * ============================================================
+ */
+
 export async function updateMyCompany(
     data: CompanyUpdateData,
 ): Promise<Company> {
@@ -41,6 +59,25 @@ export async function updateMyCompany(
         await api.put<Company>(
             "/companies/me",
             data,
+        );
+
+    return response.data;
+}
+
+
+/*
+ * ============================================================
+ * Публичная компания
+ * ============================================================
+ */
+
+export async function getCompanyById(
+    companyId: number,
+): Promise<Company> {
+
+    const response =
+        await api.get<Company>(
+            `/companies/${companyId}`,
         );
 
     return response.data;

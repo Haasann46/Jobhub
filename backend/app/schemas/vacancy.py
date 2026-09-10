@@ -2,7 +2,12 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+)
 
 from backend.app.models.enums import (
     EmploymentType,
@@ -15,13 +20,18 @@ from backend.app.schemas.technology import (
 
 
 class VacancySort(str, Enum):
+
     NEWEST = "newest"
+
     OLDEST = "oldest"
+
     SALARY_ASC = "salary_asc"
+
     SALARY_DESC = "salary_desc"
 
 
 class VacancySearchParams(BaseModel):
+
     search: str | None = None
 
     location: str | None = None
@@ -46,9 +56,14 @@ class VacancySearchParams(BaseModel):
 
 
 class VacancyBase(BaseModel):
+
     title: str
 
     description: str
+
+    requirements: str
+
+    responsibilities: str
 
     category: VacancyCategory
 
@@ -62,17 +77,48 @@ class VacancyBase(BaseModel):
 
     salary_to: Optional[int] = None
 
+    currency: str = "USD"
+
     is_remote: bool = False
+
+    @field_validator(
+        "description",
+        "requirements",
+        "responsibilities",
+    )
+    @classmethod
+    def validate_required_text(
+        cls,
+        value: str,
+    ) -> str:
+
+        value = value.strip()
+
+        if not value:
+
+            raise ValueError(
+                "Поле обязательно для заполнения.",
+            )
+
+        return value
 
 
 class VacancyCreate(VacancyBase):
-    technology_ids: list[int] = []
+
+    technology_ids: list[int] = Field(
+        default_factory=list,
+    )
 
 
 class VacancyUpdate(BaseModel):
+
     title: Optional[str] = None
 
     description: Optional[str] = None
+
+    requirements: Optional[str] = None
+
+    responsibilities: Optional[str] = None
 
     category: Optional[VacancyCategory] = None
 
@@ -86,24 +132,55 @@ class VacancyUpdate(BaseModel):
 
     salary_to: Optional[int] = None
 
+    currency: Optional[str] = None
+
     is_remote: Optional[bool] = None
 
     is_active: Optional[bool] = None
 
     technology_ids: Optional[list[int]] = None
 
+    @field_validator(
+        "description",
+        "requirements",
+        "responsibilities",
+    )
+    @classmethod
+    def validate_required_text(
+        cls,
+        value: str | None,
+    ) -> str | None:
+
+        if value is None:
+
+            return None
+
+        value = value.strip()
+
+        if not value:
+
+            raise ValueError(
+                "Поле обязательно для заполнения.",
+            )
+
+        return value
+
 
 class TechnologyResponse(BaseModel):
+
     model_config = ConfigDict(
         from_attributes=True,
     )
 
     id: int
+
     name: str
+
     slug: str
 
 
 class VacancyResponse(VacancyBase):
+
     model_config = ConfigDict(
         from_attributes=True,
     )
@@ -118,9 +195,15 @@ class VacancyResponse(VacancyBase):
 
     published_at: datetime
 
-    technologies: list[TechnologyResponse] = []
+    is_active: bool
+
+    technologies: list[TechnologyResponse] = Field(
+        default_factory=list,
+    )
+
 
 class VacancyListResponse(BaseModel):
+
     items: list[VacancyResponse]
 
     total: int

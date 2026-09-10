@@ -23,6 +23,10 @@ from backend.app.models.enums import (
 class Vacancy(BaseModel):
     __tablename__ = "vacancies"
 
+    # ==========================================================================
+    # Basic information
+    # ==========================================================================
+
     title: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
@@ -33,16 +37,40 @@ class Vacancy(BaseModel):
         nullable=False,
     )
 
+    requirements: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+
+    responsibilities: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+
     category: Mapped[VacancyCategory] = mapped_column(
         Enum(VacancyCategory),
         nullable=False,
         default=VacancyCategory.BACKEND,
     )
 
+    # ==========================================================================
+    # Location
+    # ==========================================================================
+
     location: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
     )
+
+    is_remote: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
+    # ==========================================================================
+    # Employment
+    # ==========================================================================
 
     employment_type: Mapped[EmploymentType] = mapped_column(
         Enum(EmploymentType),
@@ -54,6 +82,10 @@ class Vacancy(BaseModel):
         nullable=False,
     )
 
+    # ==========================================================================
+    # Salary
+    # ==========================================================================
+
     salary_from: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True,
@@ -64,11 +96,15 @@ class Vacancy(BaseModel):
         nullable=True,
     )
 
-    is_remote: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
+    currency: Mapped[str] = mapped_column(
+        String(10),
         nullable=False,
+        default="USD",
     )
+
+    # ==========================================================================
+    # Publication
+    # ==========================================================================
 
     is_active: Mapped[bool] = mapped_column(
         Boolean,
@@ -81,6 +117,10 @@ class Vacancy(BaseModel):
         nullable=False,
     )
 
+    # ==========================================================================
+    # Company
+    # ==========================================================================
+
     company_id: Mapped[int] = mapped_column(
         ForeignKey(
             "companies.id",
@@ -92,6 +132,10 @@ class Vacancy(BaseModel):
     company: Mapped["Company"] = relationship(
         back_populates="vacancies",
     )
+
+    # ==========================================================================
+    # Technologies
+    # ==========================================================================
 
     technologies: Mapped[list["Technology"]] = relationship(
         secondary="vacancy_technologies",

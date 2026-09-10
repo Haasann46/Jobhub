@@ -1,6 +1,13 @@
+from datetime import (
+    datetime,
+    timezone,
+)
 import math
-from datetime import datetime, timezone
-from fastapi import HTTPException, status
+
+from fastapi import (
+    HTTPException,
+    status,
+)
 
 from backend.app.models.enums import (
     EmploymentType,
@@ -22,13 +29,14 @@ from backend.app.schemas.vacancy import (
 )
 
 
-
 class VacancyService:
+
     def __init__(
         self,
         repository: VacancyRepository,
     ):
         self.repository = repository
+
 
     def _to_response(
         self,
@@ -37,24 +45,49 @@ class VacancyService:
 
         return VacancyResponse(
             id=vacancy.id,
+
             title=vacancy.title,
+
             description=vacancy.description,
+
+            requirements=vacancy.requirements,
+
+            responsibilities=vacancy.responsibilities,
+
             category=vacancy.category,
+
             location=vacancy.location,
+
             employment_type=vacancy.employment_type,
+
             experience_level=vacancy.experience_level,
+
             salary_from=vacancy.salary_from,
+
             salary_to=vacancy.salary_to,
+
+            currency=vacancy.currency,
+
             is_remote=vacancy.is_remote,
+
+            is_active=vacancy.is_active,
+
             company_id=vacancy.company_id,
+
             company_name=vacancy.company.name,
+
             company_logo=vacancy.company.logo_url,
+
             published_at=vacancy.published_at,
+
             technologies=[
-                TechnologyResponse.model_validate(technology)
+                TechnologyResponse.model_validate(
+                    technology,
+                )
                 for technology in vacancy.technologies
             ],
         )
+
 
     async def search(
         self,
@@ -85,11 +118,17 @@ class VacancyService:
             sort=sort,
         )
 
-        pages = math.ceil(total / size) if total else 0
+        pages = (
+            math.ceil(total / size)
+            if total
+            else 0
+        )
 
         return VacancyListResponse(
             items=[
-                self._to_response(vacancy)
+                self._to_response(
+                    vacancy,
+                )
                 for vacancy in vacancies
             ],
             total=total,
@@ -99,6 +138,7 @@ class VacancyService:
             has_next=page < pages,
             has_previous=page > 1,
         )
+
 
     async def get_by_id(
         self,
@@ -110,11 +150,30 @@ class VacancyService:
         )
 
         if vacancy is None:
+
             return None
 
         return self._to_response(
             vacancy,
         )
+
+
+    async def get_technologies(
+        self,
+    ) -> list[TechnologyResponse]:
+
+        technologies = (
+            await self.repository
+            .get_all_technologies()
+        )
+
+        return [
+            TechnologyResponse.model_validate(
+                technology,
+            )
+            for technology in technologies
+        ]
+
 
     async def create(
         self,
@@ -123,9 +182,13 @@ class VacancyService:
     ) -> VacancyResponse:
 
         if current_user.role != UserRole.EMPLOYER:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only employers can create vacancies.",
+                detail=(
+                    "Only employers can "
+                    "create vacancies."
+                ),
             )
 
         company_repository = CompanyRepository(
@@ -137,20 +200,63 @@ class VacancyService:
         )
 
         if company is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Company not found.",
             )
 
+        technology_ids = list(
+            dict.fromkeys(
+                data.technology_ids,
+            )
+        )
+
+        technologies = (
+            await self.repository
+            .get_technologies_by_ids(
+                technology_ids,
+            )
+        )
+
+        if len(technologies) != len(
+            technology_ids
+        ):
+
+            found_ids = {
+                technology.id
+                for technology in technologies
+            }
+
+            invalid_ids = [
+                technology_id
+                for technology_id in technology_ids
+                if technology_id not in found_ids
+            ]
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Unknown technology IDs: "
+                    f"{invalid_ids}"
+                ),
+            )
+
         payload = data.model_dump(
-            exclude={"technology_ids"},
+            exclude={
+                "technology_ids",
+            },
         )
 
         vacancy = Vacancy(
             company_id=company.id,
-            published_at=datetime.now(timezone.utc),
+            published_at=datetime.now(
+                timezone.utc,
+            ),
             **payload,
         )
+
+        vacancy.technologies = technologies
 
         created = await self.repository.create(
             vacancy,
@@ -164,15 +270,20 @@ class VacancyService:
             created,
         )
 
+
     async def get_my(
         self,
         current_user: User,
     ) -> list[VacancyResponse]:
 
         if current_user.role != UserRole.EMPLOYER:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only employers can view their vacancies.",
+                detail=(
+                    "Only employers can "
+                    "view their vacancies."
+                ),
             )
 
         company_repository = CompanyRepository(
@@ -184,19 +295,46 @@ class VacancyService:
         )
 
         if company is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Company not found.",
             )
 
-        vacancies = await self.repository.get_by_company_id(
-            company.id,
+        vacancies = (
+            await self.repository
+            .get_by_company_id(
+                company.id,
+            )
         )
 
         return [
-            self._to_response(vacancy)
+            self._to_response(
+                vacancy,
+            )
             for vacancy in vacancies
         ]
+
+
+    async def get_active_by_company_id(
+        self,
+        company_id: int,
+    ) -> list[VacancyResponse]:
+
+        vacancies = (
+            await self.repository
+            .get_active_by_company_id(
+                company_id,
+            )
+        )
+
+        return [
+            self._to_response(
+                vacancy,
+            )
+            for vacancy in vacancies
+        ]
+
 
     async def update(
         self,
@@ -206,9 +344,13 @@ class VacancyService:
     ) -> VacancyResponse:
 
         if current_user.role != UserRole.EMPLOYER:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only employers can update vacancies.",
+                detail=(
+                    "Only employers can "
+                    "update vacancies."
+                ),
             )
 
         vacancy = await self.repository.get_by_id(
@@ -216,6 +358,7 @@ class VacancyService:
         )
 
         if vacancy is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Vacancy not found.",
@@ -230,25 +373,78 @@ class VacancyService:
         )
 
         if company is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Company not found.",
             )
 
         if vacancy.company_id != company.id:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You cannot edit this vacancy.",
+                detail=(
+                    "You cannot edit "
+                    "this vacancy."
+                ),
             )
 
-        for field, value in data.model_dump(
+        update_data = data.model_dump(
             exclude_unset=True,
-        ).items():
+        )
+
+        technology_ids = update_data.pop(
+            "technology_ids",
+            None,
+        )
+
+        for field, value in update_data.items():
+
             setattr(
                 vacancy,
                 field,
                 value,
             )
+
+        if technology_ids is not None:
+
+            unique_ids = list(
+                dict.fromkeys(
+                    technology_ids,
+                )
+            )
+
+            technologies = (
+                await self.repository
+                .get_technologies_by_ids(
+                    unique_ids,
+                )
+            )
+
+            if len(technologies) != len(
+                unique_ids
+            ):
+
+                found_ids = {
+                    technology.id
+                    for technology in technologies
+                }
+
+                invalid_ids = [
+                    technology_id
+                    for technology_id in unique_ids
+                    if technology_id not in found_ids
+                ]
+
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        "Unknown technology IDs: "
+                        f"{invalid_ids}"
+                    ),
+                )
+
+            vacancy.technologies = technologies
 
         vacancy = await self.repository.update(
             vacancy,
@@ -262,6 +458,7 @@ class VacancyService:
             vacancy,
         )
 
+
     async def delete(
         self,
         vacancy_id: int,
@@ -269,9 +466,13 @@ class VacancyService:
     ) -> None:
 
         if current_user.role != UserRole.EMPLOYER:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only employers can delete vacancies.",
+                detail=(
+                    "Only employers can "
+                    "delete vacancies."
+                ),
             )
 
         vacancy = await self.repository.get_by_id(
@@ -279,6 +480,7 @@ class VacancyService:
         )
 
         if vacancy is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Vacancy not found.",
@@ -293,15 +495,20 @@ class VacancyService:
         )
 
         if company is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Company not found.",
             )
 
         if vacancy.company_id != company.id:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You cannot delete this vacancy.",
+                detail=(
+                    "You cannot delete "
+                    "this vacancy."
+                ),
             )
 
         await self.repository.delete(

@@ -1,4 +1,7 @@
-from fastapi import HTTPException, status
+from fastapi import (
+    HTTPException,
+    status,
+)
 
 from backend.app.models.application import Application
 from backend.app.models.enums import (
@@ -51,11 +54,14 @@ class ApplicationService:
     ) -> ApplicationResponse:
 
         if current_user.role != UserRole.CANDIDATE:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only candidates can apply for vacancies.",
+                detail=(
+                    "Only candidates can "
+                    "apply for vacancies."
+                ),
             )
-
 
         vacancy_repository = VacancyRepository(
             self.repository.db,
@@ -66,11 +72,18 @@ class ApplicationService:
         )
 
         if vacancy is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Vacancy not found.",
             )
 
+        if not vacancy.is_active:
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This vacancy is inactive.",
+            )
 
         existing = (
             await self.repository
@@ -81,11 +94,14 @@ class ApplicationService:
         )
 
         if existing is not None:
+
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="You have already applied for this vacancy.",
+                detail=(
+                    "You have already applied "
+                    "for this vacancy."
+                ),
             )
-
 
         resume_repository = ResumeRepository(
             self.repository.db,
@@ -96,25 +112,25 @@ class ApplicationService:
         )
 
         if resume is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Resume not found.",
             )
 
-
         if resume.user_id != current_user.id:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You cannot use this resume.",
             )
 
-
         if not resume.is_active:
+
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="This resume is inactive.",
             )
-
 
         application = Application(
             candidate_id=current_user.id,
@@ -124,11 +140,9 @@ class ApplicationService:
             status=ApplicationStatus.NEW,
         )
 
-
         application = await self.repository.create(
             application,
         )
-
 
         company_repository = CompanyRepository(
             self.repository.db,
@@ -156,7 +170,6 @@ class ApplicationService:
                 vacancy_id=vacancy.id,
             )
 
-
         return ApplicationResponse.model_validate(
             application,
         )
@@ -168,11 +181,14 @@ class ApplicationService:
     ) -> list[ApplicationResponse]:
 
         if current_user.role != UserRole.CANDIDATE:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only candidates can view their applications.",
+                detail=(
+                    "Only candidates can "
+                    "view their applications."
+                ),
             )
-
 
         applications = (
             await self.repository
@@ -180,7 +196,6 @@ class ApplicationService:
                 current_user.id,
             )
         )
-
 
         return [
             ApplicationResponse.model_validate(
@@ -196,11 +211,14 @@ class ApplicationService:
     ) -> int:
 
         if current_user.role != UserRole.EMPLOYER:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only employers can view application count.",
+                detail=(
+                    "Only employers can "
+                    "view application count."
+                ),
             )
-
 
         company_repository = CompanyRepository(
             self.repository.db,
@@ -211,11 +229,11 @@ class ApplicationService:
         )
 
         if company is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Company not found.",
             )
-
 
         return await self.repository.count_by_company_id(
             company.id,
@@ -229,11 +247,14 @@ class ApplicationService:
     ) -> list[EmployerApplicationResponse]:
 
         if current_user.role != UserRole.EMPLOYER:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only employers can view applications.",
+                detail=(
+                    "Only employers can "
+                    "view applications."
+                ),
             )
-
 
         vacancy_repository = VacancyRepository(
             self.repository.db,
@@ -244,11 +265,11 @@ class ApplicationService:
         )
 
         if vacancy is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Vacancy not found.",
             )
-
 
         company_repository = CompanyRepository(
             self.repository.db,
@@ -259,18 +280,21 @@ class ApplicationService:
         )
 
         if company is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Company not found.",
             )
 
-
         if vacancy.company_id != company.id:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You cannot view applications for this vacancy.",
+                detail=(
+                    "You cannot view applications "
+                    "for this vacancy."
+                ),
             )
-
 
         applications = (
             await self.repository
@@ -279,17 +303,26 @@ class ApplicationService:
             )
         )
 
-
         return [
             EmployerApplicationResponse(
                 id=application.id,
+
                 candidate_id=application.candidate_id,
+
                 candidate_email=application.candidate.email,
+
                 vacancy_id=application.vacancy_id,
+
                 resume=application.resume,
+
+                profile=application.candidate.profile,
+
                 cover_letter=application.cover_letter,
+
                 status=application.status,
+
                 created_at=application.created_at,
+
                 updated_at=application.updated_at,
             )
             for application in applications
@@ -304,22 +337,25 @@ class ApplicationService:
     ) -> EmployerApplicationResponse:
 
         if current_user.role != UserRole.EMPLOYER:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only employers can update application status.",
+                detail=(
+                    "Only employers can "
+                    "update application status."
+                ),
             )
-
 
         application = await self.repository.get_by_id(
             application_id,
         )
 
         if application is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Application not found.",
             )
-
 
         vacancy_repository = VacancyRepository(
             self.repository.db,
@@ -330,11 +366,11 @@ class ApplicationService:
         )
 
         if vacancy is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Vacancy not found.",
             )
-
 
         company_repository = CompanyRepository(
             self.repository.db,
@@ -345,28 +381,29 @@ class ApplicationService:
         )
 
         if company is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Company not found.",
             )
 
-
         if vacancy.company_id != company.id:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You cannot update this application.",
+                detail=(
+                    "You cannot update "
+                    "this application."
+                ),
             )
-
 
         old_status = application.status
 
         application.status = data.status
 
-
         application = await self.repository.update(
             application,
         )
-
 
         if old_status != data.status:
 
@@ -376,7 +413,10 @@ class ApplicationService:
 
             await notification_service.create(
                 recipient_id=application.candidate_id,
-                notification_type=NotificationType.APPLICATION_STATUS_CHANGED,
+                notification_type=(
+                    NotificationType
+                    .APPLICATION_STATUS_CHANGED
+                ),
                 title="Статус отклика изменён",
                 message=(
                     f'Статус вашего отклика на вакансию '
@@ -386,30 +426,63 @@ class ApplicationService:
                 vacancy_id=vacancy.id,
             )
 
-
-        #
-        # Re-read the application after commit so the response contains
-        # the persisted status and all required relationships.
-
-        refreshed_application = await self.repository.get_by_id(
-            application_id,
+        refreshed_application = (
+            await self.repository.get_by_id(
+                application_id,
+            )
         )
 
         if refreshed_application is None:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Application not found after update.",
+                detail=(
+                    "Application not found "
+                    "after update."
+                ),
             )
-
 
         return EmployerApplicationResponse(
             id=refreshed_application.id,
+
             candidate_id=refreshed_application.candidate_id,
-            candidate_email=refreshed_application.candidate.email,
-            vacancy_id=refreshed_application.vacancy_id,
+
+            candidate_email=(
+                refreshed_application
+                .candidate
+                .email
+            ),
+
+            vacancy_id=(
+                refreshed_application
+                .vacancy_id
+            ),
+
             resume=refreshed_application.resume,
-            cover_letter=refreshed_application.cover_letter,
-            status=refreshed_application.status,
-            created_at=refreshed_application.created_at,
-            updated_at=refreshed_application.updated_at,
+
+            profile=(
+                refreshed_application
+                .candidate
+                .profile
+            ),
+
+            cover_letter=(
+                refreshed_application
+                .cover_letter
+            ),
+
+            status=(
+                refreshed_application
+                .status
+            ),
+
+            created_at=(
+                refreshed_application
+                .created_at
+            ),
+
+            updated_at=(
+                refreshed_application
+                .updated_at
+            ),
         )

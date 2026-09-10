@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.database import get_db
 from backend.app.dependencies.current_user import get_current_user
+from backend.app.dependencies.vacancy import get_vacancy_service
 from backend.app.models.user import User
 from backend.app.repositories.company import CompanyRepository
 from backend.app.schemas.company import (
@@ -14,7 +15,10 @@ from backend.app.schemas.company import (
     CompanyResponse,
     CompanyUpdate,
 )
+from backend.app.schemas.vacancy import VacancyResponse
 from backend.app.services.company import CompanyService
+from backend.app.services.vacancy import VacancyService
+
 
 router = APIRouter()
 
@@ -22,8 +26,14 @@ router = APIRouter()
 def get_company_service(
     db: AsyncSession = Depends(get_db),
 ) -> CompanyService:
-    repository = CompanyRepository(db)
-    return CompanyService(repository)
+
+    repository = CompanyRepository(
+        db,
+    )
+
+    return CompanyService(
+        repository,
+    )
 
 
 @router.post(
@@ -40,6 +50,7 @@ async def create_company(
         get_company_service,
     ),
 ):
+
     return await service.create(
         current_user,
         data,
@@ -58,6 +69,7 @@ async def get_my_company(
         get_company_service,
     ),
 ):
+
     return await service.get_me(
         current_user,
     )
@@ -76,7 +88,40 @@ async def update_my_company(
         get_company_service,
     ),
 ):
+
     return await service.update(
         current_user,
         data,
+    )
+
+
+@router.get(
+    "/{company_id}/vacancies",
+    response_model=list[VacancyResponse],
+)
+async def get_company_vacancies(
+    company_id: int,
+    service: VacancyService = Depends(
+        get_vacancy_service,
+    ),
+):
+
+    return await service.get_active_by_company_id(
+        company_id,
+    )
+
+
+@router.get(
+    "/{company_id}",
+    response_model=CompanyResponse,
+)
+async def get_public_company(
+    company_id: int,
+    service: CompanyService = Depends(
+        get_company_service,
+    ),
+):
+
+    return await service.get_public(
+        company_id,
     )

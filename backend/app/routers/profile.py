@@ -5,23 +5,38 @@ from fastapi import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.database import get_db
-from backend.app.dependencies.current_user import get_current_user
+from backend.app.dependencies.current_user import (
+    get_current_user,
+)
 from backend.app.models.user import User
-from backend.app.repositories.profile import ProfileRepository
+from backend.app.repositories.profile import (
+    ProfileRepository,
+)
 from backend.app.schemas.profile import (
     ProfileResponse,
     ProfileUpdate,
 )
-from backend.app.services.profile import ProfileService
+from backend.app.services.profile import (
+    ProfileService,
+)
 
-router = APIRouter()
+
+router = APIRouter(
+    tags=["Profile"],
+)
 
 
 def get_profile_service(
     db: AsyncSession = Depends(get_db),
 ) -> ProfileService:
-    repository = ProfileRepository(db)
-    return ProfileService(repository)
+
+    repository = ProfileRepository(
+        db,
+    )
+
+    return ProfileService(
+        repository,
+    )
 
 
 @router.get(
@@ -36,6 +51,7 @@ async def get_my_profile(
         get_profile_service,
     ),
 ):
+
     return await service.get_me(
         current_user,
     )
@@ -54,6 +70,7 @@ async def update_my_profile(
         get_profile_service,
     ),
 ):
+
     return await service.update_me(
         current_user,
         data,
